@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Goods Input</title>
+  <link rel='stylesheet' href='/stylesheets/admin/goods.css' />
+</head>
+<div>
+  <div class="input-div">
+    <label>goods_major_classification</label>
+    <select id="goods_major_classification" name="goods_major_classification" onchange="setSubClassification()"></select>
+  </div>
+  <div class="input-div">
+    <label>goods_sub_classification</label>
+    <select id="goods_sub_classification" name="goods_sub_classification"></select>
+  </div>
+  <div class="input-div">
+    <label>stock_quantity</label>
+    <input type="text" name="stock_quantity">
+  </div>
+  <div class="input-div">
+    <label>price</label>
+    <input type="text" name="price">
+  </div>
+  <div class="input-div">
+    <label>chn_title</label>
+    <input type="text" name="chn_title">
+  </div>
+  <div class="input-div">
+    <label>chn_subtitle</label>
+    <input type="text" name="chn_subtitle">
+  </div>
+  <div class="input-div">
+    <label>chn_info</label>
+    <input type="text" name="chn_info">
+  </div>
+  <div class="input-div">
+    <label>kor_title</label>
+    <input type="text" name="kor_title">
+  </div>
+  <div class="input-div">
+    <label>kor_subtitle</label>
+    <input type="text" name="kor_subtitle">
+  </div>
+  <div class="input-div">
+    <label>kor_info</label>
+    <input type="text" name="kor_info">
+  </div>
+  <div class="input-div">
+    <label>overseas_flag</label>
+    <input type="text" name="overseas_flag">
+  </div>
+  <div class="input-div">
+    <label>top_image_add</label>
+    <input type="button" name="image_add" value="ADD" onclick="">
+  </div>
+  <div class="input-div top_iamge_add_form">
+    <input type="file" name="top_image">
+  </div>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<script src="/javascripts/admin/goods.js"></script>
+<script type="text/javascript">
+$(function() {
+	setMajorClassification();
+});
+</script>
+</body>
+
+</html>
