@@ -46,6 +46,12 @@ function setSubClassification() {
   });
 }
 
-function image_add_form() {
-  $('.top_iamge_add_form').append();
+function topImageFormAdd() {
+  var html = '<input type="file" name="top_image">';
+  $('.top_iamge_add_form').append(html);
+}
+
+function infoImageFormAdd() {
+  var html = '<input type="file" name="info_image">';
+  $('.info_iamge_add_form').append(html);
 }
