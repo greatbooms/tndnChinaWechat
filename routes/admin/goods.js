@@ -79,21 +79,20 @@ router.post('/input/save', function(req, res, next) {
     var filename, size, paraName, contentType, saveFileName;
 
     var jsonStr;
-    if (part.filename) {
+    var writeStream;
+    if (part.filename != '') {
       filename = part.filename;
       size = part.byteCount;
       paraName = part.name;
       contentType = part.headers['content-type'];
       saveFileName = util.UUID() + '_' + filename;
+      fileArray.items.push({ "paraName": paraName, "type": contentType, "size": size, "originName": filename, "saveName": saveFileName })
+      writeStream = fs.createWriteStream('/storage/goodsImage/' + saveFileName);
+      writeStream.filename = saveFileName;
+      part.pipe(writeStream);
     } else {
       part.resume();
     }
-
-    fileArray.items.push({ "paraName": paraName, "type": contentType, "size": size, "originName": filename, "saveName": saveFileName })
-
-    var writeStream = fs.createWriteStream('/tmp/' + saveFileName);
-    writeStream.filename = saveFileName;
-    part.pipe(writeStream);
 
     part.on('data', function(chunk) {
       // console.log(filename + ' read ' + chunk.length + 'bytes');
@@ -101,7 +100,8 @@ router.post('/input/save', function(req, res, next) {
 
     part.on('end', function() {
       // console.log(filename + ' Part read complete');
-      writeStream.end();
+      if (part.filename != '')
+        writeStream.end();
     });
   });
 
