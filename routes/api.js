@@ -122,22 +122,47 @@ router.get('/getGoodsDetailInfo', function(req, res, next) {
 
 router.post('/setCartItem', function(req, res, next) {
   var idxUser = req.body.idx_user;
-  var idxGoods = req.query.idx_goods;
+  var idxGoods = req.body.idx_goods;
+  var queryStr = 'INSERT INTO cart(';
+  queryStr += 'idx_user, ';
+  queryStr += 'idx_goods, ';
+  queryStr += 'quantity, ';
+  queryStr += 'status_flag, ';
+  queryStr += 'insert_date) ';
+  queryStr += 'VALUES(';
+  queryStr += idxUser + ', ';
+  queryStr += idxGoods + ', ';
+  queryStr += '1, ';
+  queryStr += '1, ';
+  queryStr += 'NOW())';
+
+  console.log(queryStr);
+  databasePool.getConnection(function(err, connection) {
+    connection.query(queryStr, function(error, rows, fields) {
+      connection.release();
+      if (error) {
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({result: "FAIL"}));
+      } else {
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({result: "SUCCESS"}));
+      }
+    });
+  });
+});
+
+router.get('/getCartItem', function(req, res, next) {
+  var major_class = req.query.idx_user;
   var queryStr = 'SELECT ';
   queryStr += 'goods.id, ';
-  queryStr += 'goods.idx_goods_classification, ';
-  queryStr += 'goods.price, ';
   queryStr += 'goods.chn_title, ';
   queryStr += 'goods.chn_subtitle, ';
-  queryStr += '(SELECT idx_image_file FROM goods_image WHERE top_flag = 1 AND idx_goods = goods.id ORDER BY update_date, id LIMIT 1) AS idx_image ';
-  queryStr += 'FROM goods goods, ';
-  queryStr += 'goods_sub_classification goods_sub ';
-  queryStr += 'WHERE goods.idx_goods_classification = goods_sub.id ';
-  queryStr += 'AND goods.status_flag != 3 ';
-  if (major_class != undefined)
-    queryStr += 'AND goods_sub.idx_major_classification = ' + major_class + ' ';
-  if (sub_class != undefined)
-    queryStr += 'AND goods_sub.id = ' + sub_class + ' ';
+  queryStr += 'goods.price, ';
+  queryStr += 'cart.quantity ';
+  queryStr += 'FROM cart cart, goods goods ';
+  queryStr += 'WHERE cart.idx_goods = goods.id ';
+  queryStr += 'AND cart.status_flag != 3 ';
+  queryStr += 'AND cart.idx_user = ' + major_class + ' ';
 
   console.log(queryStr);
   databasePool.getConnection(function(err, connection) {
@@ -145,6 +170,55 @@ router.post('/setCartItem', function(req, res, next) {
       connection.release();
       res.contentType('application/json; charset=utf-8');
       res.end(JSON.stringify(rows));
+    });
+  });
+});
+
+router.put('/updateCartItem', function(req, res, next) {
+  var cartId = req.body.idx_cart;
+  var quantity = req.body.quantity;
+
+  // console.log(req);
+  console.log(quantity);
+  var queryStr = 'UPDATE cart ';
+  queryStr += 'SET quantity = ' + quantity + ', ';
+  queryStr += 'update_date = NOW() ';
+  queryStr += 'WHERE id = ' + cartId;
+
+  console.log(queryStr);
+  databasePool.getConnection(function(err, connection) {
+    connection.query(queryStr, function(error, rows, fields) {
+      connection.release();
+      if (error) {
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({result: "FAIL"}));
+      } else {
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({result: "SUCCESS"}));
+      }
+    });
+  });
+});
+
+router.delete('/deleteCartItem', function(req, res, next) {
+  var cartId = req.body.idx_cart;
+
+  var queryStr = 'UPDATE cart ';
+  queryStr += 'SET status_flag = 3, ';
+  queryStr += 'update_date = NOW() ';
+  queryStr += 'WHERE id = ' + cartId;
+
+  console.log(queryStr);
+  databasePool.getConnection(function(err, connection) {
+    connection.query(queryStr, function(error, rows, fields) {
+      connection.release();
+      if (error) {
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({result: "FAIL"}));
+      } else {
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({result: "SUCCESS"}));
+      }
     });
   });
 });

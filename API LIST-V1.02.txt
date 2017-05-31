@@ -1,0 +1,134 @@
+API LIST
+
+1.total goods list
+method - get
+url - http://116.62.196.89:50506/api/getGoodsList
+parameter - 
+example return - [{"id":26,"idx_goods_classification":1,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":42},{"id":27,"idx_goods_classification":2,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":45}]
+
+2.major clssification goods list
+method - get
+url - http://116.62.196.89:50506/api/getGoodsList
+parameter - idx_goods_major_classification
+example return - [{"id":26,"idx_goods_classification":1,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":42},{"id":27,"idx_goods_classification":2,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":45},{"id":28,"idx_goods_classification":3,"price":"31000","chn_title":"化妆品333","chn_subtitle":"化妆品1化妆品1","idx_image":47}]
+
+3.sub clssification goods list
+method - get
+url - http://116.62.196.89:50506/api/getGoodsList
+parameter - idx_goods_major_classification, idx_goods_sub_classification
+example return - [{"id":26,"idx_goods_classification":1,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":42}]
+
+4.get image
+method - get
+url - http://116.62.196.89:50506/api/getImage
+parameter - idx
+example return - 
+
+5.getGoodsDetailInfo
+method - get
+url - http://116.62.196.89:50506/api/getGoodsDetailInfo
+parameter - idx_goods
+example return - {
+  "goodsInfo": [
+    {
+      "id": 28,
+      "idx_goods_classification": 3,
+      "price": "31000",
+      "chn_title": "化妆品333",
+      "chn_subtitle": "化妆品1化妆品1",
+      "chn_info": "化妆品1化妆品1化妆品1化妆品1化妆品1",
+      "chn_name": "化妆品3"
+    }
+  ],
+  "goodsTopImage": [
+    {
+      "id": 26,
+      "idx_image_file": 47,
+      "top_flag": 1
+    }
+  ],
+  "goodsDetailImage": [
+    {
+      "id": 27,
+      "idx_image_file": 48,
+      "top_flag": 0
+    }
+  ]
+}
+
+6.getGoodsDetailInfo
+method - get
+url - http://116.62.196.89:50506/api/getGoodsDetailInfo
+parameter - idx_goods
+example return - {
+  "goodsInfo": [
+    {
+      "id": 28,
+      "idx_goods_classification": 3,
+      "price": "31000",
+      "chn_title": "化妆品333",
+      "chn_subtitle": "化妆品1化妆品1",
+      "chn_info": "化妆品1化妆品1化妆品1化妆品1化妆品1",
+      "chn_name": "化妆品3"
+    }
+  ],
+  "goodsTopImage": [
+    {
+      "id": 26,
+      "idx_image_file": 47,
+      "top_flag": 1
+    }
+  ],
+  "goodsDetailImage": [
+    {
+      "id": 27,
+      "idx_image_file": 48,
+      "top_flag": 0
+    }
+  ]
+}
+
+7.setCartItem
+method - post
+url - http://116.62.196.89:50506/api/setCartItem
+parameter - idx_user, idx_goods
+example return - {
+  "result": "SUCCESS"
+}
+
+8.getCartItem
+method - get
+url - http://116.62.196.89:50506/api/getCartItem
+parameter - idx_user
+example return - [
+  {
+    "id": 29,
+    "chn_title": "化妆品4444",
+    "chn_subtitle": "化妆品1化妆品1",
+    "price": "31000",
+    "quantity": 1
+  },
+  {
+    "id": 28,
+    "chn_title": "化妆品333",
+    "chn_subtitle": "化妆品1化妆品1",
+    "price": "31000",
+    "quantity": 1
+  }
+]
+
+9.updateCartItem  -- cart quantity change
+method - put
+url - http://116.62.196.89:50506/api/updateCartItem
+parameter - idx_cart, quantity
+example return - {
+  "result": "SUCCESS"
+}
+
+10.deleteCartItem
+method - delete
+url - http://116.62.196.89:50506/api/deleteCartItem
+parameter - idx_cart
+example return - {
+  "result": "SUCCESS"
+}
