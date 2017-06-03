@@ -125,10 +125,131 @@ example return - {
   "result": "SUCCESS"
 }
 
+https://stackoverflow.com/questions/39916939/attaching-data-body-to-http-delete-event-in-vuejs
+vue send -> this.$http.delete(url, {body: data})
+
 10.deleteCartItem
 method - delete
 url - http://116.62.196.89:50506/api/deleteCartItem
 parameter - idx_cart
+example return - {
+  "result": "SUCCESS"
+}
+
+11.getAreacode
+method - get
+url - http://116.62.196.89:50506/api/getAreacode
+parameter - topno
+info - Areacode 3 step,
+     - 1 step ->  "typename": "省" OR  "typename": "市" -> http://116.62.196.89:50506/api/getAreacode?topno=0
+     -  {
+          "id": 35,
+          "areaname": "河北省",
+          "no": 130000,         -> 2step parameter
+          "topno": 0,
+          "areacode": "",
+          "arealevel": 1,
+          "typename": "省"
+        }
+     - 2 step -> "typename": "市" OR  "typename": "区" -> http://116.62.196.89:50506/api/getAreacode?topno=130000 -> parameter 1step no value
+     -  {
+          "id": 36,
+          "areaname": "石家庄市",
+          "no": 130100,         -> 3step parameter
+          "topno": 130000,
+          "areacode": "0311",
+          "arealevel": 2,
+          "typename": "市"
+        }
+      - 3 step -> "typename": "区" -> http://116.62.196.89:50506/api/getAreacode?topno=130100 -> parameter 2step no value
+      - {
+          "id": 37,
+          "areaname": "长安区",
+          "no": 130102,
+          "topno": 130100,
+          "areacode": "0311",
+          "arealevel": 3,
+          "typename": "区"
+        }
+
+12.setUserAddress
+method - post
+url - http://116.62.196.89:50506/api/setUserAddress
+parameter - 
+            idx_user - required value
+            weixin_id  - required value
+            name
+            sex - 1 -> man, 2-> woman
+            contacts
+            zip_code
+            address_1 - getAreacode 1 step no value
+            address_2 - getAreacode 2 step no value 
+            address_3 - getAreacode 3 step no value 
+            address_detail 
+example return - {
+  "result": "SUCCESS"
+}
+
+13.getUserAddressList
+method - get
+url - http://116.62.196.89:50506/api/getUserAddressList
+parameter - idx_user
+example return - [
+  {
+    "id": 2,
+    "weixin_id": "asd_asdqweasdaq",
+    "name": "shin sang hoon",
+    "sex": "1",
+    "contacts": "01071500894",
+    "zip_code": "05016",
+    "addressName_1": "北京市",
+    "addressName_2": "朝阳区",
+    "addressName_3": null,
+    "address_detail": "amsa dong 482-36"
+  }
+]
+
+13.getUserAddressDetail
+method - get
+url - http://116.62.196.89:50506/api/getUserAddressDetail
+parameter - idx_address
+example return - [
+  {
+    "id": 2,
+    "weixin_id": "asd_asdqweasdaq",
+    "name": "shin sang hoon",
+    "sex": "1",
+    "contacts": "01071500894",
+    "zip_code": "05016",
+    "address_1": "110000",
+    "address_2": "110105",
+    "address_3": "",
+    "address_detail": "amsa dong 482-36"
+  }
+]
+
+14.updateUserAddress
+method - put
+url - http://116.62.196.89:50506/api/updateUserAddress
+parameter - 
+            idx_address - required value
+            weixin_id  - required value
+            name
+            sex - 1 -> man, 2-> woman
+            contacts
+            zip_code
+            address_1 - getAreacode 1 step no value
+            address_2 - getAreacode 2 step no value 
+            address_3 - getAreacode 3 step no value 
+            address_detail 
+example return - {
+  "result": "SUCCESS"
+}
+
+15.deleteUserAddress
+method - delete
+url - http://116.62.196.89:50506/api/deleteUserAddress
+parameter - idx_address
 example return - {
   "result": "SUCCESS"
 }
