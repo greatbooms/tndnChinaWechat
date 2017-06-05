@@ -126,40 +126,88 @@ router.get('/getGoodsDetailInfo', function(req, res, next) {
 });
 
 router.post('/setCartItem', function(req, res, next) {
-  var idxUser = req.body.idx_user;
-  var idxGoods = req.body.idx_goods;
-  var queryStr = 'INSERT INTO cart(';
-  queryStr += 'idx_user, ';
-  queryStr += 'idx_goods, ';
-  queryStr += 'quantity, ';
-  queryStr += 'status_flag, ';
-  queryStr += 'insert_date) ';
-  queryStr += 'VALUES(';
-  queryStr += idxUser + ', ';
-  queryStr += idxGoods + ', ';
-  queryStr += '1, ';
-  queryStr += '1, ';
-  queryStr += 'NOW())';
 
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
+  var form = new multiparty.Form();
+  var inputArray = {};
+
+  // get field name & value
+  form.on('field', function(name, value) {
+    inputArray[name] = value;
+    console.log('normal field / name = ' + name + ' , value = ' + value);
+  });
+
+  // file upload handling
+  form.on('part', function(part) {
+    part.on('data', function(chunk) {});
+    part.on('end', function() {});
+  });
+
+  // all uploads are completed
+  form.on('close', function() {
+    var queryStr = 'SELECT ';
+    queryStr += '* ';
+    queryStr += 'FROM cart ';
+    queryStr += 'WHERE status_flag != 3 ';
+    queryStr += 'AND idx_user = ' + inputArray.idx_user + ' ';
+    queryStr += 'AND idx_goods = ' + inputArray.idx_goods + ' ';
+    console.log(queryStr);
+
+    databasePool.getConnection(function(err, connection) {
+      connection.query(queryStr, function(error, rows, fields) {
+        if (error) {
+          res.contentType('application/json; charset=utf-8');
+          res.end(JSON.stringify({ result: "FAIL" }));
+        } else {
+          console.log(rows.length);
+          if (rows.length != 0) {
+            queryStr = 'UPDATE cart ';
+            queryStr += 'SET quantity = quantity + 1, ';
+            queryStr += 'status_flag = 2, ';
+            queryStr += 'update_date = NOW() ';
+            queryStr += 'WHERE idx_user = ' + inputArray.idx_user + ' ';
+            queryStr += 'AND idx_goods = ' + inputArray.idx_goods + ' ';
+            queryStr += 'AND status_flag != 3';
+          } else {
+            queryStr = 'INSERT INTO cart(';
+            queryStr += 'idx_user, ';
+            queryStr += 'idx_goods, ';
+            queryStr += 'quantity, ';
+            queryStr += 'status_flag, ';
+            queryStr += 'insert_date) ';
+            queryStr += 'VALUES(';
+            queryStr += inputArray.idx_user + ', ';
+            queryStr += inputArray.idx_goods + ', ';
+            queryStr += '1, ';
+            queryStr += '1, ';
+            queryStr += 'NOW())';
+          }
+          console.log(queryStr);
+          connection.query(queryStr, function(error, rows, fields) {
+            if (error) {
+              res.contentType('application/json; charset=utf-8');
+              res.end(JSON.stringify({ result: "FAIL" }));
+            } else {
+              res.contentType('application/json; charset=utf-8');
+              res.end(JSON.stringify({ result: "SUCCESS" }));
+            }
+          });
+        }
+      });
       connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "FAIL" }));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "SUCCESS" }));
-      }
     });
   });
+
+  // track progress
+  form.on('progress', function(byteRead, byteExpected) {
+    // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+  });
+  form.parse(req);
 });
 
 router.get('/getCartItem', function(req, res, next) {
   var major_class = req.query.idx_user;
   var queryStr = 'SELECT ';
-  queryStr += 'goods.id, ';
+  queryStr += 'cart.id, ';
   queryStr += 'goods.chn_title, ';
   queryStr += 'goods.chn_subtitle, ';
   queryStr += 'goods.price, ';
@@ -188,6 +236,10 @@ router.put('/updateCartItem', function(req, res, next) {
   var cartId = req.body.idx_cart;
   var quantity = req.body.quantity;
 
+  console.log(req.body);
+  console.log(req.query);
+  console.log(req.params);
+
   // console.log(req);
   console.log('cartId = ' + cartId);
   console.log('quantity = ' + quantity);
@@ -213,7 +265,8 @@ router.put('/updateCartItem', function(req, res, next) {
 });
 
 router.delete('/deleteCartItem', function(req, res, next) {
-  var cartId = req.body.idx_cart;
+
+  var cartId = req.query.idx_cart;
 
   console.log('cartId = ' + cartId);
 
