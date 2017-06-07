@@ -233,40 +233,61 @@ router.get('/getCartItem', function(req, res, next) {
 });
 
 router.put('/updateCartItem', function(req, res, next) {
-  var cartId = req.body.idx_cart;
-  var quantity = req.body.quantity;
+  var form = new multiparty.Form();
+  var inputArray = { idx_carts: [], quantitys: [] };
 
-  console.log(req.body);
-  console.log(req.query);
-  console.log(req.params);
-
-  // console.log(req);
-  console.log('cartId = ' + cartId);
-  console.log('quantity = ' + quantity);
-  var queryStr = 'UPDATE cart ';
-  queryStr += 'SET quantity = ' + quantity + ', ';
-  queryStr += 'status_flag = 2, ';
-  queryStr += 'update_date = NOW() ';
-  queryStr += 'WHERE id = ' + cartId;
-
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "FAIL" }));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "SUCCESS" }));
-      }
-    });
+  // get field name & value
+  form.on('field', function(name, value) {
+    inputArray[name] = value;
+    if (name == 'idx_cart') {
+      inputArray.idx_carts.push({ "idx_cart": value })
+    } else if (name == 'quantity') {
+      inputArray.quantitys.push({ "quantity": value })
+    }
+    console.log('normal field / name = ' + name + ' , value = ' + value);
   });
+
+  // file upload handling
+  form.on('part', function(part) {
+    part.on('data', function(chunk) {});
+    part.on('end', function() {});
+  });
+
+  // all uploads are completed
+  form.on('close', function() {
+    for (var i = 0; i < inputArray.idx_carts.length; i++) {
+      var queryStr = 'UPDATE cart ';
+      queryStr += 'SET quantity = ' + inputArray.quantitys[i].quantity + ', ';
+      queryStr += 'status_flag = 2, ';
+      queryStr += 'update_date = NOW() ';
+      queryStr += 'WHERE id = ' + inputArray.idx_carts[i].idx_cart;
+
+      console.log(queryStr);
+      databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+          if (error) throw error;
+        });
+        connection.release();
+      });
+    }
+    res.contentType('application/json; charset=utf-8');
+    res.end(JSON.stringify({ result: "SUCCESS" }));
+  });
+
+  // track progress
+  form.on('progress', function(byteRead, byteExpected) {
+    // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+  });
+  form.parse(req);
 });
 
 router.delete('/deleteCartItem', function(req, res, next) {
 
   var cartId = req.query.idx_cart;
+
+  console.log(req.body);
+  console.log(req.query);
+  console.log(req.param);
 
   console.log('cartId = ' + cartId);
 
@@ -323,119 +344,79 @@ router.get('/getAreacode', function(req, res, next) {
 });
 
 router.post('/setUserAddress', function(req, res, next) {
-  var idx_user = req.body.idx_user;
-  var weixin_id = req.body.weixin_id;
-  var name = req.body.name;
-  var sex = req.body.sex;
-  var contacts = req.body.contacts;
-  var zip_code = req.body.zip_code;
-  var address_1 = req.body.address_1;
-  var address_2 = req.body.address_2;
-  var address_3 = req.body.address_3;
-  var address_detail = req.body.address_detail;
+  var form = new multiparty.Form();
+  var inputArray = {};
 
-  console.log('idx_user = ' + idx_user);
-  console.log('weixin_id = ' + weixin_id);
-  console.log('name = ' + name);
-  console.log('sex = ' + sex);
-  console.log('contacts = ' + contacts);
-  console.log('zip_code = ' + zip_code);
-  console.log('address_1 = ' + address_1);
-  console.log('address_2 = ' + address_2);
-  console.log('address_3 = ' + address_3);
-  console.log('address_detail = ' + address_detail);
+  // get field name & value
+  form.on('field', function(name, value) {
+    inputArray[name] = value;
+    console.log('normal field / name = ' + name + ' , value = ' + value);
+  });
 
-  if (idx_user == undefined || idx_user == '') {
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({ result: "idx_user FAIL" }));
-    return;
-  } else if (weixin_id == undefined || weixin_id == '') {
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({ result: "weixin_id FAIL" }));
-    return;
-  }
+  // file upload handling
+  form.on('part', function(part) {
+    part.on('data', function(chunk) {});
+    part.on('end', function() {});
+  });
 
-  var queryStr = 'INSERT INTO user_address(';
-  queryStr += 'idx_user, ';
-  queryStr += 'weixin_id, ';
-  queryStr += 'name, ';
-  queryStr += 'sex, ';
-  queryStr += 'contacts, ';
-  queryStr += 'zip_code, ';
-  queryStr += 'address_1, ';
-  queryStr += 'address_2, ';
-  queryStr += 'address_3, ';
-  queryStr += 'address_detail, ';
-  queryStr += 'status_flag, ';
-  queryStr += 'insert_date) ';
-  queryStr += 'VALUES(';
-  queryStr += idx_user + ', ';
-  queryStr += '"' + weixin_id + '", ';
-  queryStr += '"' + name + '", ';
-  queryStr += '"' + sex + '", ';
-  queryStr += '"' + contacts + '", ';
-  queryStr += '"' + zip_code + '", ';
-  queryStr += '"' + address_1 + '", ';
-  queryStr += '"' + address_2 + '", ';
-  queryStr += '"' + address_3 + '", ';
-  queryStr += '"' + address_detail + '", ';
-  queryStr += '1, ';
-  queryStr += 'NOW())';
+  // all uploads are completed
+  form.on('close', function() {
+    if (inputArray.idx_user == undefined || inputArray.idx_user == '') {
+      res.contentType('application/json; charset=utf-8');
+      res.end(JSON.stringify({ result: "idx_user FAIL" }));
+      return;
+    } else if (inputArray.weixin_id == undefined || inputArray.weixin_id == '') {
+      res.contentType('application/json; charset=utf-8');
+      res.end(JSON.stringify({ result: "weixin_id FAIL" }));
+      return;
+    }
+    var queryStr = 'INSERT INTO user_address(';
+    queryStr += 'idx_user, ';
+    queryStr += 'weixin_id, ';
+    queryStr += 'name, ';
+    queryStr += 'sex, ';
+    queryStr += 'contacts, ';
+    queryStr += 'zip_code, ';
+    queryStr += 'address_1, ';
+    queryStr += 'address_2, ';
+    queryStr += 'address_3, ';
+    queryStr += 'address_detail, ';
+    queryStr += 'status_flag, ';
+    queryStr += 'insert_date) ';
+    queryStr += 'VALUES(';
+    queryStr += inputArray.idx_user + ', ';
+    queryStr += '"' + inputArray.weixin_id + '", ';
+    queryStr += '"' + inputArray.name + '", ';
+    queryStr += '"' + inputArray.sex + '", ';
+    queryStr += '"' + inputArray.contacts + '", ';
+    queryStr += '"' + inputArray.zip_code + '", ';
+    queryStr += '"' + inputArray.address_1 + '", ';
+    queryStr += '"' + inputArray.address_2 + '", ';
+    queryStr += '"' + inputArray.address_3 + '", ';
+    queryStr += '"' + inputArray.address_detail + '", ';
+    queryStr += '1, ';
+    queryStr += 'NOW())';
 
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "FAIL" }));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "SUCCESS" }));
-      }
+    console.log(queryStr);
+    databasePool.getConnection(function(err, connection) {
+      connection.query(queryStr, function(error, rows, fields) {
+        connection.release();
+        if (error) {
+          res.contentType('application/json; charset=utf-8');
+          res.end(JSON.stringify({ result: "FAIL" }));
+        } else {
+          res.contentType('application/json; charset=utf-8');
+          res.end(JSON.stringify({ result: "SUCCESS" }));
+        }
+      });
     });
   });
-});
 
-router.get('/getUserAddressList', function(req, res, next) {
-  var idx_user = req.query.idx_user;
-
-  console.log('idx_user = ' + idx_user);
-
-  if (idx_user == undefined || idx_user == '') {
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({ result: "idx_user FAIL" }));
-    return;
-  }
-
-  var queryStr = 'SELECT ';
-  queryStr += 'id, ';
-  queryStr += 'weixin_id, ';
-  queryStr += 'name, ';
-  queryStr += 'sex, ';
-  queryStr += 'contacts, ';
-  queryStr += 'zip_code, ';
-  queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_1) as addressName_1, ';
-  queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_2) as addressName_2, ';
-  queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_3) as addressName_3, ';
-  queryStr += 'address_detail ';
-  queryStr += 'FROM user_address ';
-  queryStr += 'WHERE status_flag != 3 ';
-  queryStr += 'AND idx_user = ' + idx_user + ' ';
-
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({}));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify(rows));
-      }
-    });
+  // track progress
+  form.on('progress', function(byteRead, byteExpected) {
+    // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
   });
+  form.parse(req);
 });
 
 router.get('/getUserAddressList', function(req, res, next) {
@@ -521,69 +502,74 @@ router.get('/getUserAddressDetail', function(req, res, next) {
 });
 
 router.put('/updateUserAddress', function(req, res, next) {
-  var idx_address = req.body.idx_address;
-  var weixin_id = req.body.weixin_id;
-  var name = req.body.name;
-  var sex = req.body.sex;
-  var contacts = req.body.contacts;
-  var zip_code = req.body.zip_code;
-  var address_1 = req.body.address_1;
-  var address_2 = req.body.address_2;
-  var address_3 = req.body.address_3;
-  var address_detail = req.body.address_detail;
+  var form = new multiparty.Form();
+  var inputArray = {};
 
-  console.log('idx_address = ' + idx_address);
-  console.log('weixin_id = ' + weixin_id);
-  console.log('name = ' + name);
-  console.log('sex = ' + sex);
-  console.log('contacts = ' + contacts);
-  console.log('zip_code = ' + zip_code);
-  console.log('address_1 = ' + address_1);
-  console.log('address_2 = ' + address_2);
-  console.log('address_3 = ' + address_3);
-  console.log('address_detail = ' + address_detail);
+  // get field name & value
+  form.on('field', function(name, value) {
+    inputArray[name] = value;
+    console.log('normal field / name = ' + name + ' , value = ' + value);
+  });
 
-  if (idx_address == undefined || idx_address == '') {
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({ result: "idx_address FAIL" }));
-    return;
-  } else if (weixin_id == undefined || weixin_id == '') {
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({ result: "weixin_id FAIL" }));
-    return;
-  }
+  // file upload handling
+  form.on('part', function(part) {
+    part.on('data', function(chunk) {});
+    part.on('end', function() {});
+  });
 
-  var queryStr = 'UPDATE user_address ';
-  queryStr += 'SET weixin_id = "' + weixin_id + '", ';
-  queryStr += 'name = "' + name + '", ';
-  queryStr += 'sex = "' + sex + '", ';
-  queryStr += 'contacts = "' + contacts + '", ';
-  queryStr += 'zip_code = "' + zip_code + '", ';
-  queryStr += 'address_1 = "' + address_1 + '", ';
-  queryStr += 'address_2 = "' + address_2 + '", ';
-  queryStr += 'address_3 = "' + address_3 + '", ';
-  queryStr += 'address_detail = "' + address_detail + '", ';
-  queryStr += 'status_flag = 2, ';
-  queryStr += 'update_date = NOW() ';
-  queryStr += 'WHERE id = ' + idx_address;
+  // all uploads are completed
+  form.on('close', function() {
+    if (inputArray.idx_address == undefined || inputArray.idx_address == '') {
+      res.contentType('application/json; charset=utf-8');
+      res.end(JSON.stringify({ result: "idx_address FAIL" }));
+      return;
+    } else if (inputArray.weixin_id == undefined || inputArray.weixin_id == '') {
+      res.contentType('application/json; charset=utf-8');
+      res.end(JSON.stringify({ result: "weixin_id FAIL" }));
+      return;
+    }
+    var queryStr = 'UPDATE user_address ';
+    queryStr += 'SET weixin_id = "' + inputArray.weixin_id + '", ';
+    queryStr += 'name = "' + inputArray.name + '", ';
+    queryStr += 'sex = "' + inputArray.sex + '", ';
+    queryStr += 'contacts = "' + inputArray.contacts + '", ';
+    queryStr += 'zip_code = "' + inputArray.zip_code + '", ';
+    queryStr += 'address_1 = "' + inputArray.address_1 + '", ';
+    queryStr += 'address_2 = "' + inputArray.address_2 + '", ';
+    queryStr += 'address_3 = "' + inputArray.address_3 + '", ';
+    queryStr += 'address_detail = "' + inputArray.address_detail + '", ';
+    queryStr += 'status_flag = 2, ';
+    queryStr += 'update_date = NOW() ';
+    queryStr += 'WHERE id = ' + inputArray.idx_address;
 
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "FAIL" }));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "SUCCESS" }));
-      }
+    console.log(queryStr);
+    databasePool.getConnection(function(err, connection) {
+      connection.query(queryStr, function(error, rows, fields) {
+        connection.release();
+        if (error) {
+          res.contentType('application/json; charset=utf-8');
+          res.end(JSON.stringify({ result: "FAIL" }));
+        } else {
+          res.contentType('application/json; charset=utf-8');
+          res.end(JSON.stringify({ result: "SUCCESS" }));
+        }
+      });
     });
   });
+
+  // track progress
+  form.on('progress', function(byteRead, byteExpected) {
+    // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+  });
+  form.parse(req);
 });
 
 router.delete('/deleteUserAddress', function(req, res, next) {
-  var idx_address = req.body.idx_address;
+  var idx_address = req.query.idx_address;
+
+  console.log(req.body);
+  console.log(req.query);
+  console.log(req.param);
 
   console.log('idx_address = ' + idx_address);
 

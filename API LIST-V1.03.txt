@@ -2,31 +2,31 @@ API LIST
 
 1.total goods list
 method - get
-url - http://116.62.196.89:50506/api/getGoodsList
+url - http://www.tndnchina.cn/api/getGoodsList
 parameter - 
 example return - [{"id":26,"idx_goods_classification":1,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":42},{"id":27,"idx_goods_classification":2,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":45}]
 
 2.major clssification goods list
 method - get
-url - http://116.62.196.89:50506/api/getGoodsList
+url - http://www.tndnchina.cn/api/getGoodsList
 parameter - idx_goods_major_classification
 example return - [{"id":26,"idx_goods_classification":1,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":42},{"id":27,"idx_goods_classification":2,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":45},{"id":28,"idx_goods_classification":3,"price":"31000","chn_title":"化妆品333","chn_subtitle":"化妆品1化妆品1","idx_image":47}]
 
 3.sub clssification goods list
 method - get
-url - http://116.62.196.89:50506/api/getGoodsList
+url - http://www.tndnchina.cn/api/getGoodsList
 parameter - idx_goods_major_classification, idx_goods_sub_classification
 example return - [{"id":26,"idx_goods_classification":1,"price":"31000","chn_title":"化妆品1","chn_subtitle":"化妆品1化妆品1","idx_image":42}]
 
 4.get image
 method - get
-url - http://116.62.196.89:50506/api/getImage
+url - http://www.tndnchina.cn/api/getImage
 parameter - idx
 example return - 
 
 5.getGoodsDetailInfo
 method - get
-url - http://116.62.196.89:50506/api/getGoodsDetailInfo
+url - http://www.tndnchina.cn/api/getGoodsDetailInfo
 parameter - idx_goods
 example return - {
   "goodsInfo": [
@@ -58,7 +58,7 @@ example return - {
 
 6.getGoodsDetailInfo
 method - get
-url - http://116.62.196.89:50506/api/getGoodsDetailInfo
+url - http://www.tndnchina.cn/api/getGoodsDetailInfo
 parameter - idx_goods
 example return - {
   "goodsInfo": [
@@ -90,7 +90,7 @@ example return - {
 
 7.setCartItem
 method - post
-url - http://116.62.196.89:50506/api/setCartItem
+url - http://www.tndnchina.cn/api/setCartItem
 parameter - idx_user, idx_goods
 example return - {
   "result": "SUCCESS"
@@ -98,7 +98,7 @@ example return - {
 
 8.getCartItem
 method - get
-url - http://116.62.196.89:50506/api/getCartItem
+url - http://www.tndnchina.cn/api/getCartItem
 parameter - idx_user
 example return - [
   {
@@ -119,7 +119,7 @@ example return - [
 
 9.updateCartItem  -- cart quantity change
 method - put
-url - http://116.62.196.89:50506/api/updateCartItem
+url - http://www.tndnchina.cn/api/updateCartItem
 parameter - idx_cart, quantity
 example return - {
   "result": "SUCCESS"
@@ -130,7 +130,7 @@ vue send -> this.$http.delete(url, {body: data})
 
 10.deleteCartItem
 method - delete
-url - http://116.62.196.89:50506/api/deleteCartItem
+url - http://www.tndnchina.cn/api/deleteCartItem
 parameter - idx_cart
 example return - {
   "result": "SUCCESS"
@@ -138,10 +138,10 @@ example return - {
 
 11.getAreacode
 method - get
-url - http://116.62.196.89:50506/api/getAreacode
+url - http://www.tndnchina.cn/api/getAreacode
 parameter - topno
 info - Areacode 3 step,
-     - 1 step ->  "typename": "省" OR  "typename": "市" -> http://116.62.196.89:50506/api/getAreacode?topno=0
+     - 1 step ->  "typename": "省" OR  "typename": "市" -> http://www.tndnchina.cn/api/getAreacode?topno=0
      -  {
           "id": 35,
           "areaname": "河北省",
@@ -151,7 +151,7 @@ info - Areacode 3 step,
           "arealevel": 1,
           "typename": "省"
         }
-     - 2 step -> "typename": "市" OR  "typename": "区" -> http://116.62.196.89:50506/api/getAreacode?topno=130000 -> parameter 1step no value
+     - 2 step -> "typename": "市" OR  "typename": "区" -> http://www.tndnchina.cn/api/getAreacode?topno=130000 -> parameter 1step no value
      -  {
           "id": 36,
           "areaname": "石家庄市",
@@ -161,7 +161,7 @@ info - Areacode 3 step,
           "arealevel": 2,
           "typename": "市"
         }
-      - 3 step -> "typename": "区" -> http://116.62.196.89:50506/api/getAreacode?topno=130100 -> parameter 2step no value
+      - 3 step -> "typename": "区" -> http://www.tndnchina.cn/api/getAreacode?topno=130100 -> parameter 2step no value
       - {
           "id": 37,
           "areaname": "长安区",
@@ -174,7 +174,7 @@ info - Areacode 3 step,
 
 12.setUserAddress
 method - post
-url - http://116.62.196.89:50506/api/setUserAddress
+url - http://www.tndnchina.cn/api/setUserAddress
 parameter - 
             idx_user - required value
             weixin_id  - required value
@@ -192,7 +192,7 @@ example return - {
 
 13.getUserAddressList
 method - get
-url - http://116.62.196.89:50506/api/getUserAddressList
+url - http://www.tndnchina.cn/api/getUserAddressList
 parameter - idx_user
 example return - [
   {
@@ -211,7 +211,7 @@ example return - [
 
 13.getUserAddressDetail
 method - get
-url - http://116.62.196.89:50506/api/getUserAddressDetail
+url - http://www.tndnchina.cn/api/getUserAddressDetail
 parameter - idx_address
 example return - [
   {
@@ -230,7 +230,7 @@ example return - [
 
 14.updateUserAddress
 method - put
-url - http://116.62.196.89:50506/api/updateUserAddress
+url - http://www.tndnchina.cn/api/updateUserAddress
 parameter - 
             idx_address - required value
             weixin_id  - required value
@@ -248,7 +248,7 @@ example return - {
 
 15.deleteUserAddress
 method - delete
-url - http://116.62.196.89:50506/api/deleteUserAddress
+url - http://www.tndnchina.cn/api/deleteUserAddress
 parameter - idx_address
 example return - {
   "result": "SUCCESS"

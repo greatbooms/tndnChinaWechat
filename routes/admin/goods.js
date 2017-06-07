@@ -9,7 +9,7 @@ var databasePool = require('../../references/databaseConfig.js');
 /* GET home page. */
 router.get('/search', function(req, res, next) {
   console.log('search!');
-  res.render('admin/goods/search', { title: 'Express' });
+  res.render('admin/goods/search');
 });
 
 router.get('/json/majorClassification', function(req, res, next) {
