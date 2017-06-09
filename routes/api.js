@@ -599,4 +599,265 @@ router.delete('/deleteUserAddress', function(req, res, next) {
   });
 });
 
+router.get('/wechatRedirect', function(req, res, next) {
+
+    var code = req.query.code;
+    getToken(code).then(function(body) {
+        /**
+          {"openid":"opX9IwdgHVHJ_WAF7VKVTx5V-f30",
+          "nickname":"devTndn",
+          "sex":0,
+          "language":"ko",
+          "city":"",
+          "province":"",
+          "country":"中国",
+          "headimgurl":"",
+          "privilege":[]}
+        */
+        if (!util.valueValidation(body.openid)) {
+            //wechat login and get userInfo failed
+            res.contentType('application/json; charset=utf-8');
+            res.end(JSON.stringify({ result: "openid FAIL" }));
+            return;
+        }
+        //wechat login and get userInfo success
+        //Let's start tndn login with tndn database
+
+
+        var queryStr = "INSERT INTO user (open_id, nickname, sex, language, city, province, contry, headimgurl, privilege) " + " VALUES (\"" + body.openid + "\", \"" + body.nickname + "\",\"" + body.sex + "\",\"" + body.language + "\",\"" + body.city + "\",\"" + body.province + "\",\"" + body.contry + "\",\"" + body.headimgurl + "\",\"" + body.privilege + "\") " + " ON DUPLICATE KEY UPDATE open_id=\"" + body.openid + "\", nickname=\"" + body.nickname + "\", sex=\"" + body.sex + "\", language=\"" + body.language + "\", city=\"" + body.city + "\", province=\"" + body.province + "\", contry=\"" + body.contry + "\", headimgurl=\"" + body.headimgurl + "\", privilege=\"" + body.privilege + "\";";
+
+        databasePool.getConnection(function(err, connection) {
+            connection.query(queryStr, function(error, rows, fields) {
+                if (error) {
+                    console.log(error);
+                    res.contentType('application/json; charset=utf-8');
+                    res.end(JSON.stringify({ result: "FAIL" }));
+                } else {
+                    var userId = rows.insertId
+                    if (userId == 0) {
+                        //already registered user so get id using select query
+                        connection.query("select id from user where open_id=\"" + body.openid + "\";", function(_error, _rows, _fields) {
+                            userId = _rows[0].id;
+                            res.contentType('application/json; charset=utf-8');
+                            res.end(JSON.stringify({ idx_user: userId }));
+                        });
+
+                    } else {
+                        res.contentType('application/json; charset=utf-8');
+                        res.end(JSON.stringify({ idx_user: userId }));
+                    }
+
+                }
+                connection.release();
+
+            });
+        });
+
+    });
+
+});
+
+//getWebToken.js using wechat
+function getToken(code) {
+    var appId = 'wxa98e6fa0a6d50100';
+    var secret = 'd766e78e01c209c348a9090b0dc8267f';
+    let reqUrl = 'https://api.weixin.qq.com/sns/oauth2/access_token?';
+
+    let params = {
+        appid: appId,
+        secret: secret,
+        code: code,
+        grant_type: 'authorization_code'
+    };
+
+    let options = {
+        method: 'get',
+        url: reqUrl + qs.stringify(params)
+    };
+
+    return new Promise((resolve, reject) => {
+        request(options, function(err, res, body) {
+            if (res) {
+                getUserInfo(JSON.parse(body).access_token, JSON.parse(body).openid).then(function(data) {
+                    resolve(JSON.parse(data));
+                });
+            } else {
+                reject(err);
+            }
+        })
+    })
+}
+
+//getUserInfo using wechat
+function getUserInfo(AccessToken, openId) {
+    let reqUrl = 'https://api.weixin.qq.com/sns/userinfo?';
+    let params = {
+        access_token: AccessToken,
+        openid: openId,
+        lang: 'zh_CN'
+    };
+
+    let options = {
+        method: 'get',
+        url: reqUrl + qs.stringify(params)
+    };
+
+    return new Promise((resolve, reject) => {
+        request(options, function(err, res, data) {
+            if (res) {
+                resolve(data);
+            } else {
+                reject(err);
+            }
+        });
+    })
+}
+
+/**
+create order no
+*/
+function createOrderNo() {
+    var orderNo = Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+    return orderNo.substring(0, 22).replace('-', '').toUpperCase();
+
+}
+
+/**
+  order payed history insert to db
+*/
+router.post('/setOrder', function(req, res, next) {
+    var form = new multiparty.Form();
+    var inputArray = { idx_goodss: [], quantitys: [] };
+
+    // get field name & value
+    form.on('field', function(name, value) {
+        inputArray[name] = value;
+        if (name == 'idx_goods') {
+            inputArray.idx_goodss.push({ "idx_goods": value })
+        } else if (name == 'quantity') {
+            inputArray.quantitys.push({ "quantity": value })
+        }
+        console.log('normal field / name = ' + name + ' , value = ' + value);
+    });
+
+    // file upload handling
+    form.on('part', function(part) {
+        part.on('data', function(chunk) {});
+        part.on('end', function() {});
+    });
+
+    // all uploads are completed
+    form.on('close', function() {
+        var orderNumber = createOrderNo();
+        var historyQuery = 'INSERT INTO order_history(idx_user, total_price, order_number, pay_status, delivery_status, insert_date) ' + ' VALUES(\"' + inputArray.idx_user + '\", \"' + inputArray.total_price + '\", \"' + orderNumber + '\", 0, 0, now());';
+        var historyDetailQuery = 'INSERT INTO order_history_detail_items(idx_order_history, idx_goods, quantity) VALUES ';
+
+        // if idx_goods and quantity array size different, throw error
+        if (inputArray.idx_goodss.length != inputArray.quantitys.length) {
+            res.contentType('application/json; charset=utf-8');
+            res.end(JSON.stringify({ result: "goods and quantity size different error" }));
+            return;
+        }
+        databasePool.getConnection(function(err, connection) {
+            connection.query(historyQuery, function(error, rows, fields) {
+
+                var idxOrderHistory = rows.insertId;
+
+                console.log('insert id     ' + idxOrderHistory);
+                console.log('historyQuery     ' + historyQuery);
+
+                if (error) throw error;
+                for (var i = 0; i < inputArray.idx_goodss.length; i++) {
+                    historyDetailQuery = historyDetailQuery + ' (' + idxOrderHistory + ', ' + inputArray.idx_goodss[i].idx_goods + ', ' + inputArray.quantitys[i].quantity + '),';
+
+                    if (i == inputArray.idx_goods.length - 1) {
+                        //last array
+                        //have to delete last comma(,) and write semicolon(;)
+                        //and execute insert query
+                        console.log('historyDetailQuery11     ' + historyDetailQuery);
+
+                        historyDetailQuery = historyDetailQuery.substring(0, historyDetailQuery.length - 1) + ';';
+                        console.log('historyDetailQuery22     ' + historyDetailQuery);
+                        connection.query(historyDetailQuery, function(error2, rows2, fields2) {
+                            if (error2) throw error2;
+                            connection.release();
+                            res.contentType('application/json; charset=utf-8');
+                            res.end(JSON.stringify({ order_number: orderNumber }));
+                        });
+                    } //end if last array check
+                } //end for
+            });
+        });
+    });
+
+    // track progress
+    form.on('progress', function(byteRead, byteExpected) {
+        // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+    });
+    form.parse(req);
+});
+
+/**
+  order payed history success to db
+*/
+router.put('/updateOrder', function(req, res, next) {
+    var form = new multiparty.Form();
+    var inputArray = { idx_goodss: [], quantitys: [] };
+
+    // get field name & value
+    form.on('field', function(name, value) {
+        inputArray[name] = value;
+        console.log('normal field / name = ' + name + ' , value = ' + value);
+    });
+
+    // file upload handling
+    form.on('part', function(part) {
+        part.on('data', function(chunk) {});
+        part.on('end', function() {});
+    });
+
+    // all uploads are completed
+    form.on('close', function() {
+
+        if (!util.valueValidation(inputArray.order_number)) {
+            res.contentType('application/json; charset=utf-8');
+            res.end(JSON.stringify({ result: "order_number error" }));
+            return;
+        }
+        var queryStr = 'UPDATE order_history '
+        queryStr += ' SET '
+        queryStr += ' pay_status = 1, update_date = NOW() '
+        queryStr += ' WHERE '
+        queryStr += ' pay_status=0 '
+        queryStr += ' and order_number = \"'
+        queryStr += inputArray.order_number + '\";';
+
+
+        databasePool.getConnection(function(err, connection) {
+            connection.query(queryStr, function(error, rows, fields) {
+                if (error) throw error;
+                connection.release();
+
+                console.log(rows);
+                console.log(queryStr);
+                if (rows.affectedRows == 0) {
+                    //해당하는 값이 없음
+                    res.contentType('application/json; charset=utf-8');
+                    res.end(JSON.stringify({ result: "not match order_number FAIL" }));
+                    return;
+                }
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({ result: "SUCCESS" }));
+            });
+        });
+    });
+
+    // track progress
+    form.on('progress', function(byteRead, byteExpected) {
+        // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+    });
+    form.parse(req);
+});
+
 module.exports = router;

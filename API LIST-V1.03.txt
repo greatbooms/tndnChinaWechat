@@ -246,6 +246,7 @@ example return - {
   "result": "SUCCESS"
 }
 
+
 15.deleteUserAddress
 method - delete
 url - http://www.tndnchina.cn/api/deleteUserAddress
@@ -253,3 +254,28 @@ parameter - idx_address
 example return - {
   "result": "SUCCESS"
 }
+
+//20160609 update
+
+16.setOrder
+method - post
+url - http://www.tndnchina.cn/api/setOrder
+parameter - 
+              idx_user - required value
+              total_price - required value
+              idx_goods - required value
+              quantity - required value
+example return - {
+  "order_number": "070E810580B5A4B115B535"
+}
+
+17.updateOrder
+method - put
+url - http://www.tndnchina.cn/api/updateOrder
+parameter -
+            order_number - required value
+example return - {
+  "result": "SUCCESS"
+}
+
+
