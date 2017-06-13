@@ -1,26 +1,20 @@
-function setMajorClassification(update) {
-    console.log(update);
+function setMajorClassification(update, subClassification) {
     $.ajax({
         url: 'json/majorClassification',
         type: "get",
         dataType: "JSON",
         success: function(data) {
             var appendHtml = '';
-            console.log(data);
             $.each(data, function(key, rec) {
-                console.log('rec.id   '+rec.id);
                 if (update == rec.id) {
-                    console.log('select');
                     appendHtml += '<option selected="selected" value="' + rec.id + '">' + rec.chn_name + '(' + rec.kor_name + ')' + '</option>'
                 } else {
-                    console.log('no');
-
                     appendHtml += '<option value="' + rec.id + '">' + rec.chn_name + '(' + rec.kor_name + ')' + '</option>'
                 }
             });
             console.log(appendHtml);
             $('#goods_major_classification').html(appendHtml);
-            setSubClassification();
+            setSubClassification(subClassification);
         },
         error: function(xhr, status, error) {
             console.log(xhr);
@@ -30,7 +24,7 @@ function setMajorClassification(update) {
     });
 }
 
-function setSubClassification() {
+function setSubClassification(update) {
     $.ajax({
         url: 'json/subClassification',
         type: "get",
@@ -40,9 +34,13 @@ function setSubClassification() {
         dataType: "JSON",
         success: function(data) {
             var appendHtml = '';
-            console.log(data);
             $.each(data, function(key, rec) {
+                if (update == rec.id) {
+                appendHtml += '<option selected="selected" value="' + rec.id + '">' + rec.chn_name + '(' + rec.kor_name + ')' + '</option>'
+                } else {
                 appendHtml += '<option value="' + rec.id + '">' + rec.chn_name + '(' + rec.kor_name + ')' + '</option>'
+                }
+
             });
             console.log(appendHtml);
             $('#goods_sub_classification').html(appendHtml);

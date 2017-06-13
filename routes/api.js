@@ -528,7 +528,7 @@ router.get('/getUserAddressDetail', function(req, res, next) {
     var idx_address = req.query.idx_address;
 
 
-    if (util.valueValidation(idx_address)) {
+    if (!util.valueValidation(idx_address)) {
         util.log('getUserAddressDetail', 'idx_address FAIL');
 
         res.contentType('application/json; charset=utf-8');

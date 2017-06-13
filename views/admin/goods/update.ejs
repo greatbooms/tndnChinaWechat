@@ -2,12 +2,14 @@
 <html>
 
 <head>
-  <title>Goods Input</title>
+  <title>Goods Update</title>
   <link rel='stylesheet' href='/stylesheets/admin/goods.css' />
 </head>
 <body>
 <div>
-  <form action="input/save" method="post" enctype="multipart/form-data">
+  <form action="update/save" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="idx_goods" value="<%=idx_goods%>">
+
     <div class="input-div">
       <label>goods_major_classification</label>
       <select id="goods_major_classification" name="goods_major_classification" onchange="setSubClassification()"></select>
@@ -74,7 +76,7 @@
 <script src="/javascripts/admin/goods.js"></script>
 <script type="text/javascript">
 $(function() {
-  setMajorClassification(<%=goods_info.idx_major_classification%>);
+  setMajorClassification(<%=goods_info.idx_major_classification%>,<%=goods_info.idx_sub_classification%>);
 });
 </script>
 </body>
