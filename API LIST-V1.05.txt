@@ -255,7 +255,7 @@ example return - {
   "result": "SUCCESS"
 }
 
-//20160609 update
+//20170609 update
 
 16.setOrder
 method - post
@@ -278,4 +278,75 @@ example return - {
   "result": "SUCCESS"
 }
 
+//20170613 update
+17.getUserOrderHistory
+method - get
+url - http://www.tndnchina.cn/api/getUserOrderHistory
+parameter - 
+              idx_user - required value
 
+example return - {
+[
+    {
+        "total_price": "100",
+        "order_number": "3D586B076E9A41E0A39995",
+        "pay_status": "1",
+        "delivery_status": "0",
+        "insert_date": "2017-06-09 15:12",
+        "update_date": "2017-06-09 15:43",
+        "goods_count": 2
+    },
+    {
+        "total_price": "100",
+        "order_number": "CF8568B37992AA23AAA384",
+        "pay_status": "1",
+        "delivery_status": "0",
+        "insert_date": "2017-06-09 15:31",
+        "update_date": "2017-06-09 15:43",
+        "goods_count": 2
+    },
+    {
+        "total_price": "100",
+        "order_number": "070E810580B5A4B115B535",
+        "pay_status": "0",
+        "delivery_status": "0",
+        "insert_date": "2017-06-09 15:45",
+        "update_date": null,
+        "goods_count": 2
+    }
+]
+}
+18.getUserOrderHistoryDetail
+method - get
+url - http://www.tndnchina.cn/api/getUserOrderHistoryDetail
+parameter - 
+              order_number - required value
+  
+example return - {
+[
+    {
+        "idx_goods": 26,
+        "chn_title": "化妆品12",
+        "chn_subtitle": "化妆品1化妆品1",
+        "price": "3100",
+        "quantity": "12",
+        "idx_image_file": 42,
+        "pay_status": "1",
+        "delivery_status": "0",
+        "insert_date": "2017-06-0915:12",
+        "update_date": "2017-06-0915:43"
+    },
+    {
+        "idx_goods": 27,
+        "chn_title": "化妆品1",
+        "chn_subtitle": "化妆品1化妆品1",
+        "price": "38000",
+        "quantity": "2",
+        "idx_image_file": 45,
+        "pay_status": "1",
+        "delivery_status": "0",
+        "insert_date": "2017-06-0915:12",
+        "update_date": "2017-06-0915:43"
+    }
+]
+}

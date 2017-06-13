@@ -5,373 +5,539 @@ var fs = require('fs');
 var Promise = require('bluebird');
 var util = require('../references/utility.js');
 var databasePool = require('../references/databaseConfig.js');
+var qs = require('qs');
+var request = require('request');
 
 router.get('/getImage', function(req, res, next) {
-  var id = req.query.idx;
-  var queryStr = 'SELECT ';
-  queryStr += 'save_file_name, ';
-  queryStr += 'original_file_name, ';
-  queryStr += 'content_type, ';
-  queryStr += 'file_size ';
-  queryStr += 'FROM image_file_path ';
-  queryStr += 'WHERE id = ' + id + ' ';
-  queryStr += 'AND status_flag != 3';
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      var img;
-      if (rows.length > 0) {
-        img = fs.readFileSync('/storage/goodsImage/' + rows[0].save_file_name);
-        res.writeHead(200, { 'Content-Type': rows[0].content_type });
-      }
-      res.end(img, 'binary');
+    var id = req.query.idx;
+    var queryStr = 'SELECT ';
+    queryStr += 'save_file_name, ';
+    queryStr += 'original_file_name, ';
+    queryStr += 'content_type, ';
+    queryStr += 'file_size ';
+    queryStr += 'FROM image_file_path ';
+    queryStr += 'WHERE id = ' + id + ' ';
+    queryStr += 'AND status_flag != 3';
+    // util.log('getGoodsList', queryStr);
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            var img;
+            if (rows.length > 0) {
+                img = fs.readFileSync('/storage/goodsImage/' + rows[0].save_file_name);
+                res.writeHead(200, { 'Content-Type': rows[0].content_type });
+            }
+            res.end(img, 'binary');
+        });
     });
-  });
 });
 
 router.get('/getGoodsList', function(req, res, next) {
-  var major_class = req.query.idx_goods_major_classification;
-  var sub_class = req.query.idx_goods_sub_classification;
-  var queryStr = 'SELECT ';
-  queryStr += 'goods.id, ';
-  queryStr += 'goods.idx_goods_classification, ';
-  queryStr += 'goods.price, ';
-  queryStr += 'goods.chn_title, ';
-  queryStr += 'goods.chn_subtitle, ';
-  queryStr += '(SELECT idx_image_file FROM goods_image WHERE top_flag = 1 AND idx_goods = goods.id ORDER BY update_date, id LIMIT 1) AS idx_image ';
-  queryStr += 'FROM goods goods, ';
-  queryStr += 'goods_sub_classification goods_sub ';
-  queryStr += 'WHERE goods.idx_goods_classification = goods_sub.id ';
-  queryStr += 'AND goods.status_flag != 3 ';
-  if (major_class != undefined)
-    queryStr += 'AND goods_sub.idx_major_classification = ' + major_class + ' ';
-  if (sub_class != undefined)
-    queryStr += 'AND goods_sub.id = ' + sub_class + ' ';
+    util.log('getGoodsList', '', 'start');
 
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({}));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify(rows));
-      }
+    var major_class = req.query.idx_goods_major_classification;
+    var sub_class = req.query.idx_goods_sub_classification;
+    var queryStr = 'SELECT ';
+    queryStr += 'goods.id, ';
+    queryStr += 'goods.idx_goods_classification, ';
+    queryStr += 'goods.price, ';
+    queryStr += 'goods.chn_title, ';
+    queryStr += 'goods.chn_subtitle, ';
+    queryStr += '(SELECT idx_image_file FROM goods_image WHERE top_flag = 1 AND idx_goods = goods.id ORDER BY update_date, id LIMIT 1) AS idx_image ';
+    queryStr += 'FROM goods goods, ';
+    queryStr += 'goods_sub_classification goods_sub ';
+    queryStr += 'WHERE goods.idx_goods_classification = goods_sub.id ';
+    queryStr += 'AND goods.status_flag != 3 ';
+    if (major_class != undefined)
+        queryStr += 'AND goods_sub.idx_major_classification = ' + major_class + ' ';
+    if (sub_class != undefined)
+        queryStr += 'AND goods_sub.id = ' + sub_class + ' ';
+
+    util.log('getGoodsList', queryStr);
+
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            if (error) {
+                util.log('getGoodsList', error.message);
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({}));
+            } else {
+                util.log('getGoodsList', '', 'success');
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify(rows));
+            }
+        });
     });
-  });
 });
 
 router.get('/getGoodsDetailInfo', function(req, res, next) {
-  var idx_goods = req.query.idx_goods;
-  var returnJson = {};
-  if (idx_goods == undefined) {
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({}));
-    return;
-  }
-  var queryStr = 'SELECT ';
-  queryStr += 'goods.id, ';
-  queryStr += 'goods.idx_goods_classification, ';
-  queryStr += 'goods.price, ';
-  queryStr += 'goods.chn_title, ';
-  queryStr += 'goods.chn_subtitle, ';
-  queryStr += 'goods.chn_info, ';
-  queryStr += 'goods_sub.chn_name '
-  queryStr += 'FROM goods goods, ';
-  queryStr += 'goods_sub_classification goods_sub ';
-  queryStr += 'WHERE goods.idx_goods_classification = goods_sub.id ';
-  queryStr += 'AND goods.status_flag != 3 ';
-  queryStr += 'AND goods.id = ' + idx_goods + ' ';
+    util.log('getGoodsDetailInfo', '', 'start');
+    var idx_goods = req.query.idx_goods;
+    var returnJson = {};
+    if (!util.valueValidation(idx_goods)) {
+        util.log('getGoodsDetailInfo', 'idx_goods FAIL');
 
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      returnJson.goodsInfo = rows;
-      var queryStr = 'SELECT ';
-      queryStr += 'id, ';
-      queryStr += 'idx_image_file, ';
-      queryStr += 'top_flag ';
-      queryStr += 'FROM goods_image ';
-      queryStr += 'WHERE status_flag != 3 ';
-      queryStr += 'AND top_flag = 1 ';
-      queryStr += 'AND idx_goods = ' + idx_goods + ' ';
-      console.log(rows);
-      console.log(queryStr);
-      connection.query(queryStr, function(error, rows2, fields) {
-        returnJson.goodsTopImage = rows2;
-        var queryStr = 'SELECT ';
-        queryStr += 'id, ';
-        queryStr += 'idx_image_file, ';
-        queryStr += 'top_flag ';
-        queryStr += 'FROM goods_image ';
-        queryStr += 'WHERE status_flag != 3 ';
-        queryStr += 'AND top_flag = 0 ';
-        queryStr += 'AND idx_goods = ' + idx_goods + ' ';
-        console.log(rows2);
-        console.log(queryStr);
-        connection.query(queryStr, function(error, rows3, fields) {
-          returnJson.goodsDetailImage = rows3;
-          connection.release();
-          console.log(rows3);
-          console.log(returnJson);
-          res.contentType('application/json; charset=utf-8');
-          res.end(JSON.stringify(returnJson));
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({}));
+        return;
+    }
+    var queryStr = 'SELECT ';
+    queryStr += 'goods.id, ';
+    queryStr += 'goods.idx_goods_classification, ';
+    queryStr += 'goods.price, ';
+    queryStr += 'goods.chn_title, ';
+    queryStr += 'goods.chn_subtitle, ';
+    queryStr += 'goods.chn_info, ';
+    queryStr += 'goods_sub.chn_name '
+    queryStr += 'FROM goods goods, ';
+    queryStr += 'goods_sub_classification goods_sub ';
+    queryStr += 'WHERE goods.idx_goods_classification = goods_sub.id ';
+    queryStr += 'AND goods.status_flag != 3 ';
+    queryStr += 'AND goods.id = ' + idx_goods + ' ';
+
+    util.log('getGoodsDetailInfo', queryStr);
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            if (error) throw error
+            returnJson.goodsInfo = rows;
+            var queryStr = 'SELECT ';
+            queryStr += 'id, ';
+            queryStr += 'idx_image_file, ';
+            queryStr += 'top_flag ';
+            queryStr += 'FROM goods_image ';
+            queryStr += 'WHERE status_flag != 3 ';
+            queryStr += 'AND top_flag = 1 ';
+            queryStr += 'AND idx_goods = ' + idx_goods + ' ';
+
+            util.log('getGoodsDetailInfo', 'goodsInfo success');
+            connection.query(queryStr, function(error, rows2, fields) {
+                if (error) throw error
+
+                returnJson.goodsTopImage = rows2;
+                var queryStr = 'SELECT ';
+                queryStr += 'id, ';
+                queryStr += 'idx_image_file, ';
+                queryStr += 'top_flag ';
+                queryStr += 'FROM goods_image ';
+                queryStr += 'WHERE status_flag != 3 ';
+                queryStr += 'AND top_flag = 0 ';
+                queryStr += 'AND idx_goods = ' + idx_goods + ' ';
+                util.log('getGoodsDetailInfo', 'goodsTopImage success');
+                connection.query(queryStr, function(error, rows3, fields) {
+                    if (error) throw error
+
+                    returnJson.goodsDetailImage = rows3;
+                    connection.release();
+                    util.log('getGoodsDetailInfo', 'goodsDetailImage success');
+                    util.log('getGoodsDetailInfo', '', 'success');
+
+                    res.contentType('application/json; charset=utf-8');
+                    res.end(JSON.stringify(returnJson));
+                });
+            });
         });
-      });
     });
-  });
 });
 
 router.post('/setCartItem', function(req, res, next) {
+    util.log('setCartItem', '', 'start');
 
-  var form = new multiparty.Form();
-  var inputArray = {};
+    var form = new multiparty.Form();
+    var inputArray = {};
 
-  // get field name & value
-  form.on('field', function(name, value) {
-    inputArray[name] = value;
-    console.log('normal field / name = ' + name + ' , value = ' + value);
-  });
+    // get field name & value
+    form.on('field', function(name, value) {
+        inputArray[name] = value;
+        util.log('setCartItem', 'normal field / name = ' + name + ' , value = ' + value);
 
-  // file upload handling
-  form.on('part', function(part) {
-    part.on('data', function(chunk) {});
-    part.on('end', function() {});
-  });
-
-  // all uploads are completed
-  form.on('close', function() {
-    var queryStr = 'SELECT ';
-    queryStr += '* ';
-    queryStr += 'FROM cart ';
-    queryStr += 'WHERE status_flag != 3 ';
-    queryStr += 'AND idx_user = ' + inputArray.idx_user + ' ';
-    queryStr += 'AND idx_goods = ' + inputArray.idx_goods + ' ';
-    console.log(queryStr);
-
-    databasePool.getConnection(function(err, connection) {
-      connection.query(queryStr, function(error, rows, fields) {
-        if (error) {
-          res.contentType('application/json; charset=utf-8');
-          res.end(JSON.stringify({ result: "FAIL" }));
-        } else {
-          console.log(rows.length);
-          if (rows.length != 0) {
-            queryStr = 'UPDATE cart ';
-            queryStr += 'SET quantity = quantity + 1, ';
-            queryStr += 'status_flag = 2, ';
-            queryStr += 'update_date = NOW() ';
-            queryStr += 'WHERE idx_user = ' + inputArray.idx_user + ' ';
-            queryStr += 'AND idx_goods = ' + inputArray.idx_goods + ' ';
-            queryStr += 'AND status_flag != 3';
-          } else {
-            queryStr = 'INSERT INTO cart(';
-            queryStr += 'idx_user, ';
-            queryStr += 'idx_goods, ';
-            queryStr += 'quantity, ';
-            queryStr += 'status_flag, ';
-            queryStr += 'insert_date) ';
-            queryStr += 'VALUES(';
-            queryStr += inputArray.idx_user + ', ';
-            queryStr += inputArray.idx_goods + ', ';
-            queryStr += '1, ';
-            queryStr += '1, ';
-            queryStr += 'NOW())';
-          }
-          console.log(queryStr);
-          connection.query(queryStr, function(error, rows, fields) {
-            if (error) {
-              res.contentType('application/json; charset=utf-8');
-              res.end(JSON.stringify({ result: "FAIL" }));
-            } else {
-              res.contentType('application/json; charset=utf-8');
-              res.end(JSON.stringify({ result: "SUCCESS" }));
-            }
-          });
-        }
-      });
-      connection.release();
     });
-  });
 
-  // track progress
-  form.on('progress', function(byteRead, byteExpected) {
-    // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
-  });
-  form.parse(req);
+    // file upload handling
+    form.on('part', function(part) {
+        part.on('data', function(chunk) {});
+        part.on('end', function() {});
+    });
+
+    // all uploads are completed
+    form.on('close', function() {
+        var queryStr = 'SELECT ';
+        queryStr += '* ';
+        queryStr += 'FROM cart ';
+        queryStr += 'WHERE status_flag != 3 ';
+        queryStr += 'AND idx_user = ' + inputArray.idx_user + ' ';
+        queryStr += 'AND idx_goods = ' + inputArray.idx_goods + ' ';
+        util.log('setCartItem', queryStr);
+
+        databasePool.getConnection(function(err, connection) {
+            connection.query(queryStr, function(error, rows, fields) {
+                if (error) {
+                    util.log('setCartItem', error.message);
+                    res.contentType('application/json; charset=utf-8');
+                    res.end(JSON.stringify({ result: "FAIL" }));
+                } else {
+                    // console.log(rows.length);
+                    if (rows.length != 0) {
+                        queryStr = 'UPDATE cart ';
+                        queryStr += 'SET quantity = quantity + 1, ';
+                        queryStr += 'status_flag = 2, ';
+                        queryStr += 'update_date = NOW() ';
+                        queryStr += 'WHERE idx_user = ' + inputArray.idx_user + ' ';
+                        queryStr += 'AND idx_goods = ' + inputArray.idx_goods + ' ';
+                        queryStr += 'AND status_flag != 3';
+                    } else {
+                        queryStr = 'INSERT INTO cart(';
+                        queryStr += 'idx_user, ';
+                        queryStr += 'idx_goods, ';
+                        queryStr += 'quantity, ';
+                        queryStr += 'status_flag, ';
+                        queryStr += 'insert_date) ';
+                        queryStr += 'VALUES(';
+                        queryStr += inputArray.idx_user + ', ';
+                        queryStr += inputArray.idx_goods + ', ';
+                        queryStr += '1, ';
+                        queryStr += '1, ';
+                        queryStr += 'NOW())';
+                    }
+                    util.log('setCartItem', queryStr);
+                    connection.query(queryStr, function(error, rows, fields) {
+                        if (error) {
+                            util.log('setCartItem', error.message);
+
+                            res.contentType('application/json; charset=utf-8');
+                            res.end(JSON.stringify({ result: "FAIL" }));
+                        } else {
+                            util.log('setCartItem', '', 'success');
+
+                            res.contentType('application/json; charset=utf-8');
+                            res.end(JSON.stringify({ result: "SUCCESS" }));
+                        }
+                    });
+                }
+            });
+            connection.release();
+        });
+    });
+
+    // track progress
+    form.on('progress', function(byteRead, byteExpected) {
+        // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+    });
+    form.parse(req);
 });
 
 router.get('/getCartItem', function(req, res, next) {
-  var major_class = req.query.idx_user;
-  var queryStr = 'SELECT ';
-  queryStr += 'cart.id, ';
-  queryStr += 'goods.chn_title, ';
-  queryStr += 'goods.chn_subtitle, ';
-  queryStr += 'goods.price, ';
-  queryStr += 'cart.quantity ';
-  queryStr += 'FROM cart cart, goods goods ';
-  queryStr += 'WHERE cart.idx_goods = goods.id ';
-  queryStr += 'AND cart.status_flag != 3 ';
-  queryStr += 'AND cart.idx_user = ' + major_class + ' ';
+    util.log('getCartItem', '', 'start');
 
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({}));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify(rows));
-      }
+    var major_class = req.query.idx_user;
+    var queryStr = 'SELECT ';
+    queryStr += 'cart.id, ';
+    queryStr += 'goods.chn_title, ';
+    queryStr += 'goods.chn_subtitle, ';
+    queryStr += 'goods.price, ';
+    queryStr += 'cart.quantity ';
+    queryStr += 'FROM cart cart, goods goods ';
+    queryStr += 'WHERE cart.idx_goods = goods.id ';
+    queryStr += 'AND cart.status_flag != 3 ';
+    queryStr += 'AND cart.idx_user = ' + major_class + ' ';
+
+
+    util.log('getCartItem', queryStr);
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            if (error) {
+                util.log('getCartItem', error.message);
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({}));
+            } else {
+                util.log('getCartItem', '', 'success');
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify(rows));
+            }
+        });
     });
-  });
 });
 
 router.put('/updateCartItem', function(req, res, next) {
-  var form = new multiparty.Form();
-  var inputArray = { idx_carts: [], quantitys: [] };
+    util.log('updateCartItem', '', 'start');
 
-  // get field name & value
-  form.on('field', function(name, value) {
-    inputArray[name] = value;
-    if (name == 'idx_cart') {
-      inputArray.idx_carts.push({ "idx_cart": value })
-    } else if (name == 'quantity') {
-      inputArray.quantitys.push({ "quantity": value })
-    }
-    console.log('normal field / name = ' + name + ' , value = ' + value);
-  });
+    var form = new multiparty.Form();
+    var inputArray = { idx_carts: [], quantitys: [] };
 
-  // file upload handling
-  form.on('part', function(part) {
-    part.on('data', function(chunk) {});
-    part.on('end', function() {});
-  });
+    // get field name & value
+    form.on('field', function(name, value) {
+        inputArray[name] = value;
+        if (name == 'idx_cart') {
+            inputArray.idx_carts.push({ "idx_cart": value })
+        } else if (name == 'quantity') {
+            inputArray.quantitys.push({ "quantity": value })
+        }
+        util.log('updateCartItem', 'normal field / name = ' + name + ' , value = ' + value);
 
-  // all uploads are completed
-  form.on('close', function() {
-    for (var i = 0; i < inputArray.idx_carts.length; i++) {
-      var queryStr = 'UPDATE cart ';
-      queryStr += 'SET quantity = ' + inputArray.quantitys[i].quantity + ', ';
-      queryStr += 'status_flag = 2, ';
-      queryStr += 'update_date = NOW() ';
-      queryStr += 'WHERE id = ' + inputArray.idx_carts[i].idx_cart;
+    });
 
-      console.log(queryStr);
-      databasePool.getConnection(function(err, connection) {
-        connection.query(queryStr, function(error, rows, fields) {
-          if (error) throw error;
-        });
-        connection.release();
-      });
-    }
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({ result: "SUCCESS" }));
-  });
+    // file upload handling
+    form.on('part', function(part) {
+        part.on('data', function(chunk) {});
+        part.on('end', function() {});
+    });
 
-  // track progress
-  form.on('progress', function(byteRead, byteExpected) {
-    // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
-  });
-  form.parse(req);
+    // all uploads are completed
+    form.on('close', function() {
+        for (var i = 0; i < inputArray.idx_carts.length; i++) {
+            var queryStr = 'UPDATE cart ';
+            queryStr += 'SET quantity = ' + inputArray.quantitys[i].quantity + ', ';
+            queryStr += 'status_flag = 2, ';
+            queryStr += 'update_date = NOW() ';
+            queryStr += 'WHERE id = ' + inputArray.idx_carts[i].idx_cart;
+
+            util.log('updateCartItem', queryStr);
+            databasePool.getConnection(function(err, connection) {
+                connection.query(queryStr, function(error, rows, fields) {
+                    if (error) throw error;
+                });
+                connection.release();
+            });
+        }
+        util.log('updateCartItem', '', 'success');
+
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({ result: "SUCCESS" }));
+    });
+
+    // track progress
+    form.on('progress', function(byteRead, byteExpected) {
+        // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+    });
+    form.parse(req);
 });
 
 router.delete('/deleteCartItem', function(req, res, next) {
+    util.log('deleteCartItem', '', 'start');
 
-  var cartId = req.query.idx_cart;
+    var cartId = req.query.idx_cart;
 
-  console.log(req.body);
-  console.log(req.query);
-  console.log(req.param);
+    // console.log(req.body);
+    // console.log(req.query);
+    // console.log(req.param);
 
-  console.log('cartId = ' + cartId);
+    // console.log('cartId = ' + cartId);
 
-  var queryStr = 'UPDATE cart ';
-  queryStr += 'SET status_flag = 3, ';
-  queryStr += 'update_date = NOW() ';
-  queryStr += 'WHERE id = ' + cartId;
+    var queryStr = 'UPDATE cart ';
+    queryStr += 'SET status_flag = 3, ';
+    queryStr += 'update_date = NOW() ';
+    queryStr += 'WHERE id = ' + cartId;
 
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "FAIL" }));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "SUCCESS" }));
-      }
+    util.log('deleteCartItem', queryStr);
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            if (error) {
+                util.log('deleteCartItem', error.message);
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({ result: "FAIL" }));
+            } else {
+                util.log('deleteCartItem', '', 'success');
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({ result: "SUCCESS" }));
+            }
+        });
     });
-  });
 });
 
+
 router.get('/getAreacode', function(req, res, next) {
-  var topno = req.query.topno;
+    util.log('getAreacode', '', 'start');
 
-  console.log('topno = ' + topno);
+    var topno = req.query.topno;
 
-  var queryStr = 'SELECT ';
-  queryStr += 'id, ';
-  queryStr += 'areaname, ';
-  queryStr += 'no, ';
-  queryStr += 'topno, ';
-  queryStr += 'areacode, ';
-  queryStr += 'arealevel, ';
-  queryStr += 'typename ';
-  queryStr += 'FROM quan_prov_city_area ';
-  queryStr += 'WHERE topno = ' + topno + ' ';
-  queryStr += 'ORDER BY no';
+    var queryStr = 'SELECT ';
+    queryStr += 'id, ';
+    queryStr += 'areaname, ';
+    queryStr += 'no, ';
+    queryStr += 'topno, ';
+    queryStr += 'areacode, ';
+    queryStr += 'arealevel, ';
+    queryStr += 'typename ';
+    queryStr += 'FROM quan_prov_city_area ';
+    queryStr += 'WHERE topno = ' + topno + ' ';
+    queryStr += 'ORDER BY no';
 
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({}));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify(rows));
-      }
+    util.log('getAreacode', queryStr);
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            if (error) {
+                util.log('getAreacode', error.message);
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({}));
+            } else {
+                util.log('getAreacode', '', 'success');
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify(rows));
+            }
+        });
     });
-  });
 });
 
 router.post('/setUserAddress', function(req, res, next) {
-  var form = new multiparty.Form();
-  var inputArray = {};
+    util.log('setUserAddress', '', 'start');
 
-  // get field name & value
-  form.on('field', function(name, value) {
-    inputArray[name] = value;
-    console.log('normal field / name = ' + name + ' , value = ' + value);
-  });
+    var form = new multiparty.Form();
+    var inputArray = {};
 
-  // file upload handling
-  form.on('part', function(part) {
-    part.on('data', function(chunk) {});
-    part.on('end', function() {});
-  });
+    // get field name & value
+    form.on('field', function(name, value) {
+        inputArray[name] = value;
+        util.log('setUserAddress', 'normal field / name = ' + name + ' , value = ' + value);
 
-  // all uploads are completed
-  form.on('close', function() {
-    if (inputArray.idx_user == undefined || inputArray.idx_user == '') {
-      res.contentType('application/json; charset=utf-8');
-      res.end(JSON.stringify({ result: "idx_user FAIL" }));
-      return;
-    } else if (inputArray.weixin_id == undefined || inputArray.weixin_id == '') {
-      res.contentType('application/json; charset=utf-8');
-      res.end(JSON.stringify({ result: "weixin_id FAIL" }));
-      return;
+    });
+
+    // file upload handling
+    form.on('part', function(part) {
+        part.on('data', function(chunk) {});
+        part.on('end', function() {});
+    });
+
+    // all uploads are completed
+    form.on('close', function() {
+        if (!util.valueValidation(inputArray.idx_user)) {
+            util.log('setUserAddress', 'idx_user FAIL');
+
+            res.contentType('application/json; charset=utf-8');
+            res.end(JSON.stringify({ result: "idx_user FAIL" }));
+            return;
+        } else if (!util.valueValidation(inputArray.weixin_id)) {
+            util.log('setUserAddress', 'weixin_id FAIL');
+
+            res.contentType('application/json; charset=utf-8');
+            res.end(JSON.stringify({ result: "weixin_id FAIL" }));
+            return;
+        }
+        var queryStr = 'INSERT INTO user_address(';
+        queryStr += 'idx_user, ';
+        queryStr += 'weixin_id, ';
+        queryStr += 'name, ';
+        queryStr += 'sex, ';
+        queryStr += 'contacts, ';
+        queryStr += 'zip_code, ';
+        queryStr += 'address_1, ';
+        queryStr += 'address_2, ';
+        queryStr += 'address_3, ';
+        queryStr += 'address_detail, ';
+        queryStr += 'status_flag, ';
+        queryStr += 'insert_date) ';
+        queryStr += 'VALUES(';
+        queryStr += inputArray.idx_user + ', ';
+        queryStr += '"' + inputArray.weixin_id + '", ';
+        queryStr += '"' + inputArray.name + '", ';
+        queryStr += '"' + inputArray.sex + '", ';
+        queryStr += '"' + inputArray.contacts + '", ';
+        queryStr += '"' + inputArray.zip_code + '", ';
+        queryStr += '"' + inputArray.address_1 + '", ';
+        queryStr += '"' + inputArray.address_2 + '", ';
+        queryStr += '"' + inputArray.address_3 + '", ';
+        queryStr += '"' + inputArray.address_detail + '", ';
+        queryStr += '1, ';
+        queryStr += 'NOW())';
+
+        util.log('setUserAddress', queryStr);
+        databasePool.getConnection(function(err, connection) {
+            connection.query(queryStr, function(error, rows, fields) {
+                connection.release();
+                if (error) {
+                    util.log('setUserAddress', error.message);
+
+                    res.contentType('application/json; charset=utf-8');
+                    res.end(JSON.stringify({ result: "FAIL" }));
+                } else {
+                    util.log('setUserAddress', '', 'success');
+
+                    res.contentType('application/json; charset=utf-8');
+                    res.end(JSON.stringify({ result: "SUCCESS" }));
+                }
+            });
+        });
+    });
+
+    // track progress
+    form.on('progress', function(byteRead, byteExpected) {
+        // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+    });
+    form.parse(req);
+});
+
+router.get('/getUserAddressList', function(req, res, next) {
+    util.log('getUserAddressList', '', 'start');
+
+    var idx_user = req.query.idx_user;
+
+    // console.log('idx_user = ' + idx_user);
+
+    if (!util.valueValidation(idx_user)) {
+        util.log('getUserAddressList', 'idx_user FAIL');
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({ result: "idx_user FAIL" }));
+        return;
     }
-    var queryStr = 'INSERT INTO user_address(';
-    queryStr += 'idx_user, ';
+
+    var queryStr = 'SELECT ';
+    queryStr += 'id, ';
+    queryStr += 'weixin_id, ';
+    queryStr += 'name, ';
+    queryStr += 'sex, ';
+    queryStr += 'contacts, ';
+    queryStr += 'zip_code, ';
+    queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_1) as addressName_1, ';
+    queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_2) as addressName_2, ';
+    queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_3) as addressName_3, ';
+    queryStr += 'address_detail ';
+    queryStr += 'FROM user_address ';
+    queryStr += 'WHERE status_flag != 3 ';
+    queryStr += 'AND idx_user = ' + idx_user + ' ';
+
+    util.log('getUserAddressList', queryStr);
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            if (error) {
+                util.log('getUserAddressList', error.message);
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({}));
+            } else {
+                util.log('getUserAddressList', '', 'success');
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify(rows));
+            }
+        });
+    });
+});
+
+router.get('/getUserAddressDetail', function(req, res, next) {
+    util.log('getUserAddressDetail', '', 'start');
+
+    var idx_address = req.query.idx_address;
+
+
+    if (util.valueValidation(idx_address)) {
+        util.log('getUserAddressDetail', 'idx_address FAIL');
+
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({ result: "idx_address FAIL" }));
+        return;
+    }
+
+    var queryStr = 'SELECT ';
+    queryStr += 'id, ';
     queryStr += 'weixin_id, ';
     queryStr += 'name, ';
     queryStr += 'sex, ';
@@ -380,226 +546,148 @@ router.post('/setUserAddress', function(req, res, next) {
     queryStr += 'address_1, ';
     queryStr += 'address_2, ';
     queryStr += 'address_3, ';
-    queryStr += 'address_detail, ';
-    queryStr += 'status_flag, ';
-    queryStr += 'insert_date) ';
-    queryStr += 'VALUES(';
-    queryStr += inputArray.idx_user + ', ';
-    queryStr += '"' + inputArray.weixin_id + '", ';
-    queryStr += '"' + inputArray.name + '", ';
-    queryStr += '"' + inputArray.sex + '", ';
-    queryStr += '"' + inputArray.contacts + '", ';
-    queryStr += '"' + inputArray.zip_code + '", ';
-    queryStr += '"' + inputArray.address_1 + '", ';
-    queryStr += '"' + inputArray.address_2 + '", ';
-    queryStr += '"' + inputArray.address_3 + '", ';
-    queryStr += '"' + inputArray.address_detail + '", ';
-    queryStr += '1, ';
-    queryStr += 'NOW())';
+    queryStr += 'address_detail ';
+    queryStr += 'FROM user_address ';
+    queryStr += 'WHERE status_flag != 3 ';
+    queryStr += 'AND id = ' + idx_address + ' ';
 
-    console.log(queryStr);
+    util.log('getUserAddressDetail', queryStr);
     databasePool.getConnection(function(err, connection) {
-      connection.query(queryStr, function(error, rows, fields) {
-        connection.release();
-        if (error) {
-          res.contentType('application/json; charset=utf-8');
-          res.end(JSON.stringify({ result: "FAIL" }));
-        } else {
-          res.contentType('application/json; charset=utf-8');
-          res.end(JSON.stringify({ result: "SUCCESS" }));
-        }
-      });
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            if (error) {
+                util.log('getUserAddressDetail', error.message);
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({}));
+            } else {
+                util.log('getUserAddressDetail', '', 'success');
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify(rows));
+            }
+        });
     });
-  });
-
-  // track progress
-  form.on('progress', function(byteRead, byteExpected) {
-    // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
-  });
-  form.parse(req);
-});
-
-router.get('/getUserAddressList', function(req, res, next) {
-  var idx_user = req.query.idx_user;
-
-  console.log('idx_user = ' + idx_user);
-
-  if (idx_user == undefined || idx_user == '') {
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({ result: "idx_user FAIL" }));
-    return;
-  }
-
-  var queryStr = 'SELECT ';
-  queryStr += 'id, ';
-  queryStr += 'weixin_id, ';
-  queryStr += 'name, ';
-  queryStr += 'sex, ';
-  queryStr += 'contacts, ';
-  queryStr += 'zip_code, ';
-  queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_1) as addressName_1, ';
-  queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_2) as addressName_2, ';
-  queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_3) as addressName_3, ';
-  queryStr += 'address_detail ';
-  queryStr += 'FROM user_address ';
-  queryStr += 'WHERE status_flag != 3 ';
-  queryStr += 'AND idx_user = ' + idx_user + ' ';
-
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({}));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify(rows));
-      }
-    });
-  });
-});
-
-router.get('/getUserAddressDetail', function(req, res, next) {
-  var idx_address = req.query.idx_address;
-
-  console.log('idx_address = ' + idx_address);
-
-  if (idx_address == undefined || idx_address == '') {
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({ result: "idx_address FAIL" }));
-    return;
-  }
-
-  var queryStr = 'SELECT ';
-  queryStr += 'id, ';
-  queryStr += 'weixin_id, ';
-  queryStr += 'name, ';
-  queryStr += 'sex, ';
-  queryStr += 'contacts, ';
-  queryStr += 'zip_code, ';
-  queryStr += 'address_1, ';
-  queryStr += 'address_2, ';
-  queryStr += 'address_3, ';
-  queryStr += 'address_detail ';
-  queryStr += 'FROM user_address ';
-  queryStr += 'WHERE status_flag != 3 ';
-  queryStr += 'AND id = ' + idx_address + ' ';
-
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({}));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify(rows));
-      }
-    });
-  });
 });
 
 router.put('/updateUserAddress', function(req, res, next) {
-  var form = new multiparty.Form();
-  var inputArray = {};
+    util.log('updateUserAddress', '', 'start');
 
-  // get field name & value
-  form.on('field', function(name, value) {
-    inputArray[name] = value;
-    console.log('normal field / name = ' + name + ' , value = ' + value);
-  });
+    var form = new multiparty.Form();
+    var inputArray = {};
 
-  // file upload handling
-  form.on('part', function(part) {
-    part.on('data', function(chunk) {});
-    part.on('end', function() {});
-  });
+    // get field name & value
+    form.on('field', function(name, value) {
+        inputArray[name] = value;
+        util.log('updateUserAddress', 'normal field / name = ' + name + ' , value = ' + value);
 
-  // all uploads are completed
-  form.on('close', function() {
-    if (inputArray.idx_address == undefined || inputArray.idx_address == '') {
-      res.contentType('application/json; charset=utf-8');
-      res.end(JSON.stringify({ result: "idx_address FAIL" }));
-      return;
-    } else if (inputArray.weixin_id == undefined || inputArray.weixin_id == '') {
-      res.contentType('application/json; charset=utf-8');
-      res.end(JSON.stringify({ result: "weixin_id FAIL" }));
-      return;
-    }
-    var queryStr = 'UPDATE user_address ';
-    queryStr += 'SET weixin_id = "' + inputArray.weixin_id + '", ';
-    queryStr += 'name = "' + inputArray.name + '", ';
-    queryStr += 'sex = "' + inputArray.sex + '", ';
-    queryStr += 'contacts = "' + inputArray.contacts + '", ';
-    queryStr += 'zip_code = "' + inputArray.zip_code + '", ';
-    queryStr += 'address_1 = "' + inputArray.address_1 + '", ';
-    queryStr += 'address_2 = "' + inputArray.address_2 + '", ';
-    queryStr += 'address_3 = "' + inputArray.address_3 + '", ';
-    queryStr += 'address_detail = "' + inputArray.address_detail + '", ';
-    queryStr += 'status_flag = 2, ';
-    queryStr += 'update_date = NOW() ';
-    queryStr += 'WHERE id = ' + inputArray.idx_address;
-
-    console.log(queryStr);
-    databasePool.getConnection(function(err, connection) {
-      connection.query(queryStr, function(error, rows, fields) {
-        connection.release();
-        if (error) {
-          res.contentType('application/json; charset=utf-8');
-          res.end(JSON.stringify({ result: "FAIL" }));
-        } else {
-          res.contentType('application/json; charset=utf-8');
-          res.end(JSON.stringify({ result: "SUCCESS" }));
-        }
-      });
     });
-  });
 
-  // track progress
-  form.on('progress', function(byteRead, byteExpected) {
-    // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
-  });
-  form.parse(req);
+    // file upload handling
+    form.on('part', function(part) {
+        part.on('data', function(chunk) {});
+        part.on('end', function() {});
+    });
+
+    // all uploads are completed
+    form.on('close', function() {
+        if (!util.valueValidation(inputArray.idx_address)) {
+            util.log('updateUserAddress', 'idx_address FAIL');
+
+            res.contentType('application/json; charset=utf-8');
+            res.end(JSON.stringify({ result: "idx_address FAIL" }));
+            return;
+        } else if (!util.valueValidation(inputArray.weixin_id)) {
+            util.log('updateUserAddress', 'weixin_id FAIL');
+
+            res.contentType('application/json; charset=utf-8');
+            res.end(JSON.stringify({ result: "weixin_id FAIL" }));
+            return;
+        }
+        var queryStr = 'UPDATE user_address ';
+        queryStr += 'SET weixin_id = "' + inputArray.weixin_id + '", ';
+        queryStr += 'name = "' + inputArray.name + '", ';
+        queryStr += 'sex = "' + inputArray.sex + '", ';
+        queryStr += 'contacts = "' + inputArray.contacts + '", ';
+        queryStr += 'zip_code = "' + inputArray.zip_code + '", ';
+        queryStr += 'address_1 = "' + inputArray.address_1 + '", ';
+        queryStr += 'address_2 = "' + inputArray.address_2 + '", ';
+        queryStr += 'address_3 = "' + inputArray.address_3 + '", ';
+        queryStr += 'address_detail = "' + inputArray.address_detail + '", ';
+        queryStr += 'status_flag = 2, ';
+        queryStr += 'update_date = NOW() ';
+        queryStr += 'WHERE id = ' + inputArray.idx_address;
+
+        util.log('updateUserAddress', queryStr);
+        databasePool.getConnection(function(err, connection) {
+            connection.query(queryStr, function(error, rows, fields) {
+                connection.release();
+                if (error) {
+                    util.log('updateUserAddress', error.message);
+
+                    res.contentType('application/json; charset=utf-8');
+                    res.end(JSON.stringify({ result: "FAIL" }));
+                } else {
+                    util.log('updateUserAddress', '', 'success');
+
+                    res.contentType('application/json; charset=utf-8');
+                    res.end(JSON.stringify({ result: "SUCCESS" }));
+                }
+            });
+        });
+    });
+
+    // track progress
+    form.on('progress', function(byteRead, byteExpected) {
+        // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+    });
+    form.parse(req);
 });
 
 router.delete('/deleteUserAddress', function(req, res, next) {
-  var idx_address = req.query.idx_address;
+    util.log('deleteUserAddress', '', 'start');
 
-  console.log(req.body);
-  console.log(req.query);
-  console.log(req.param);
+    var idx_address = req.query.idx_address;
 
-  console.log('idx_address = ' + idx_address);
+    // console.log(req.body);
+    // console.log(req.query);
+    // console.log(req.param);
 
-  if (idx_address == undefined || idx_address == '') {
-    res.contentType('application/json; charset=utf-8');
-    res.end(JSON.stringify({ result: "idx_address FAIL" }));
-    return;
-  }
 
-  var queryStr = 'UPDATE user_address ';
-  queryStr += 'SET status_flag = 3, ';
-  queryStr += 'update_date = NOW() ';
-  queryStr += 'WHERE id = ' + idx_address;
+    if (!util.valueValidation(idx_address)) {
+        util.log('deleteUserAddress', 'idx_address FAIL');
 
-  console.log(queryStr);
-  databasePool.getConnection(function(err, connection) {
-    connection.query(queryStr, function(error, rows, fields) {
-      connection.release();
-      if (error) {
         res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "FAIL" }));
-      } else {
-        res.contentType('application/json; charset=utf-8');
-        res.end(JSON.stringify({ result: "SUCCESS" }));
-      }
+        res.end(JSON.stringify({ result: "idx_address FAIL" }));
+        return;
+    }
+
+    var queryStr = 'UPDATE user_address ';
+    queryStr += 'SET status_flag = 3, ';
+    queryStr += 'update_date = NOW() ';
+    queryStr += 'WHERE id = ' + idx_address;
+
+    util.log('deleteUserAddress', queryStr);
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            if (error) {
+                util.log('deleteUserAddress', error.message);
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({ result: "FAIL" }));
+            } else {
+                util.log('deleteUserAddress', '', 'success');
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({ result: "SUCCESS" }));
+            }
+        });
     });
-  });
 });
 
 router.get('/wechatRedirect', function(req, res, next) {
+    util.log('wechatRedirect', '', 'start');
 
     var code = req.query.code;
     getToken(code).then(function(body) {
@@ -616,6 +704,8 @@ router.get('/wechatRedirect', function(req, res, next) {
         */
         if (!util.valueValidation(body.openid)) {
             //wechat login and get userInfo failed
+            util.log('wechatRedirect', 'openid FAIL');
+
             res.contentType('application/json; charset=utf-8');
             res.end(JSON.stringify({ result: "openid FAIL" }));
             return;
@@ -629,7 +719,7 @@ router.get('/wechatRedirect', function(req, res, next) {
         databasePool.getConnection(function(err, connection) {
             connection.query(queryStr, function(error, rows, fields) {
                 if (error) {
-                    console.log(error);
+                    util.log('wechatRedirect', error.message);
                     res.contentType('application/json; charset=utf-8');
                     res.end(JSON.stringify({ result: "FAIL" }));
                 } else {
@@ -637,15 +727,19 @@ router.get('/wechatRedirect', function(req, res, next) {
                     if (userId == 0) {
                         //already registered user so get id using select query
                         connection.query("select id from user where open_id=\"" + body.openid + "\";", function(_error, _rows, _fields) {
+
                             userId = _rows[0].id;
                             res.contentType('application/json; charset=utf-8');
                             res.end(JSON.stringify({ idx_user: userId }));
                         });
 
                     } else {
+
                         res.contentType('application/json; charset=utf-8');
                         res.end(JSON.stringify({ idx_user: userId }));
                     }
+                    util.log('wechatRedirect', '', 'success');
+
 
                 }
                 connection.release();
@@ -659,6 +753,8 @@ router.get('/wechatRedirect', function(req, res, next) {
 
 //getWebToken.js using wechat
 function getToken(code) {
+    util.log('getToken', '', 'start');
+
     var appId = 'wxa98e6fa0a6d50100';
     var secret = 'd766e78e01c209c348a9090b0dc8267f';
     let reqUrl = 'https://api.weixin.qq.com/sns/oauth2/access_token?';
@@ -690,6 +786,8 @@ function getToken(code) {
 
 //getUserInfo using wechat
 function getUserInfo(AccessToken, openId) {
+    util.log('getUserInfo', '', 'start');
+
     let reqUrl = 'https://api.weixin.qq.com/sns/userinfo?';
     let params = {
         access_token: AccessToken,
@@ -726,6 +824,8 @@ function createOrderNo() {
   order payed history insert to db
 */
 router.post('/setOrder', function(req, res, next) {
+    util.log('setOrder', '', 'start');
+
     var form = new multiparty.Form();
     var inputArray = { idx_goodss: [], quantitys: [] };
 
@@ -737,7 +837,8 @@ router.post('/setOrder', function(req, res, next) {
         } else if (name == 'quantity') {
             inputArray.quantitys.push({ "quantity": value })
         }
-        console.log('normal field / name = ' + name + ' , value = ' + value);
+        util.log('setOrder', 'normal field / name = ' + name + ' , value = ' + value);
+
     });
 
     // file upload handling
@@ -754,8 +855,10 @@ router.post('/setOrder', function(req, res, next) {
 
         // if idx_goods and quantity array size different, throw error
         if (inputArray.idx_goodss.length != inputArray.quantitys.length) {
+            util.log('setOrder', 'different goods and quantity size FAIL');
+
             res.contentType('application/json; charset=utf-8');
-            res.end(JSON.stringify({ result: "goods and quantity size different error" }));
+            res.end(JSON.stringify({ result: "different goods and quantity size FAIL" }));
             return;
         }
         databasePool.getConnection(function(err, connection) {
@@ -763,23 +866,23 @@ router.post('/setOrder', function(req, res, next) {
 
                 var idxOrderHistory = rows.insertId;
 
-                console.log('insert id     ' + idxOrderHistory);
-                console.log('historyQuery     ' + historyQuery);
+                util.log('setOrder', 'insert order_history');
 
                 if (error) throw error;
                 for (var i = 0; i < inputArray.idx_goodss.length; i++) {
                     historyDetailQuery = historyDetailQuery + ' (' + idxOrderHistory + ', ' + inputArray.idx_goodss[i].idx_goods + ', ' + inputArray.quantitys[i].quantity + '),';
 
-                    if (i == inputArray.idx_goods.length - 1) {
+                    if (i == inputArray.idx_goodss.length - 1) {
                         //last array
                         //have to delete last comma(,) and write semicolon(;)
                         //and execute insert query
-                        console.log('historyDetailQuery11     ' + historyDetailQuery);
-
                         historyDetailQuery = historyDetailQuery.substring(0, historyDetailQuery.length - 1) + ';';
-                        console.log('historyDetailQuery22     ' + historyDetailQuery);
+
+                        util.log('setOrder', 'insert order_history_detail  ' + orderNumber);
                         connection.query(historyDetailQuery, function(error2, rows2, fields2) {
                             if (error2) throw error2;
+                            util.log('setOrder', '', 'success');
+
                             connection.release();
                             res.contentType('application/json; charset=utf-8');
                             res.end(JSON.stringify({ order_number: orderNumber }));
@@ -801,13 +904,16 @@ router.post('/setOrder', function(req, res, next) {
   order payed history success to db
 */
 router.put('/updateOrder', function(req, res, next) {
+    util.log('updateOrder', '', 'start');
+
     var form = new multiparty.Form();
     var inputArray = { idx_goodss: [], quantitys: [] };
 
     // get field name & value
     form.on('field', function(name, value) {
         inputArray[name] = value;
-        console.log('normal field / name = ' + name + ' , value = ' + value);
+        util.log('updateOrder', 'normal field / name = ' + name + ' , value = ' + value);
+
     });
 
     // file upload handling
@@ -820,8 +926,10 @@ router.put('/updateOrder', function(req, res, next) {
     form.on('close', function() {
 
         if (!util.valueValidation(inputArray.order_number)) {
+            util.log('updateOrder', 'order_number FAIL');
+
             res.contentType('application/json; charset=utf-8');
-            res.end(JSON.stringify({ result: "order_number error" }));
+            res.end(JSON.stringify({ result: "order_number FAIL" }));
             return;
         }
         var queryStr = 'UPDATE order_history '
@@ -838,14 +946,16 @@ router.put('/updateOrder', function(req, res, next) {
                 if (error) throw error;
                 connection.release();
 
-                console.log(rows);
-                console.log(queryStr);
+                util.log('updateOrder', queryStr);
                 if (rows.affectedRows == 0) {
                     //해당하는 값이 없음
+                    util.log('updateOrder', 'not match order_number FAIL');
+
                     res.contentType('application/json; charset=utf-8');
                     res.end(JSON.stringify({ result: "not match order_number FAIL" }));
                     return;
                 }
+                util.log('updateOrder', '', 'success');
 
                 res.contentType('application/json; charset=utf-8');
                 res.end(JSON.stringify({ result: "SUCCESS" }));
@@ -859,5 +969,122 @@ router.put('/updateOrder', function(req, res, next) {
     });
     form.parse(req);
 });
+
+
+
+
+router.get('/getUserOrderHistory', function(req, res, next) {
+    util.log('getUserOrderHistory', '', 'start');
+
+    var idxUser = req.query.idx_user;
+
+    var queryStr = '  SELECT  ' +
+        '    o.total_price, ' +
+        '    o.order_number, ' +
+        '    o.pay_status, ' +
+        '    o.delivery_status, ' +
+        "    DATE_FORMAT(o.insert_date, '%Y-%m-%d %H:%i') AS insert_date, " +
+        "    DATE_FORMAT(o.update_date, '%Y-%m-%d %H:%i') AS update_date, " +
+        '    COUNT(od.idx_order_history) AS goods_count ' +
+        'FROM ' +
+        '    order_history o, ' +
+        '    order_history_detail_items od, ' +
+        '    goods g, ' +
+        '    user u ' +
+        'WHERE ' +
+        '    g.status_flag != 3 ' +
+        '        AND od.idx_goods = g.id ' +
+        '        AND od.idx_order_history = o.id ' +
+        '        AND o.idx_user = u.id ' +
+        '        AND o.idx_user = ' + idxUser +
+        ' GROUP BY od.idx_order_history; ';
+    util.log('getUserOrderHistory', queryStr);
+
+    if (!util.valueValidation(idxUser)) {
+        util.log('getUserOrderHistory', 'idx_user FAIL');
+
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({ result: "idx_user FAIL" }));
+        return;
+    }
+
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            if (error) {
+                util.log('getUserOrderHistory', error.message);
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({}));
+            } else {
+                util.log('getUserOrderHistory', '', 'success');
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify(rows));
+            }
+        });
+    });
+});
+
+router.get('/getUserOrderHistoryDetail', function(req, res, next) {
+    util.log('getUserOrderHistoryDetail', '', 'start');
+
+    var orderNumber = req.query.order_number;
+
+
+    var queryStr = ' SELECT  ' +
+        '     g.id AS idx_goods, ' +
+        '     g.chn_title, ' +
+        '     g.chn_subtitle, ' +
+        '     g.price, ' +
+        '     od.quantity, ' +
+        '     gi.idx_image_file, ' +
+        '     o.pay_status, ' +
+        '     o.delivery_status, ' +
+        '     DATE_FORMAT(o.insert_date, "%Y-%m-%d%H:%i") AS insert_date, ' +
+        '     DATE_FORMAT(o.update_date, "%Y-%m-%d%H:%i") AS update_date ' +
+        ' FROM ' +
+        '     goods g, ' +
+        '     order_history_detail_items od, ' +
+        '     order_history o, ' +
+        '     goods_image gi ' +
+        ' WHERE ' +
+        '     o.id = od.idx_order_history ' +
+        '         AND od.idx_goods = g.id ' +
+        '         AND gi.status_flag != 3 ' +
+        '         AND g.status_flag != 3 ' +
+        '         AND gi.idx_goods = g.id ' +
+        '         AND gi.top_flag = 1 ' +
+        '         AND o.order_number = \"' + orderNumber + '\"; ';
+
+
+    util.log('getUserOrderHistoryDetail', queryStr);
+
+    if (!util.valueValidation(orderNumber)) {
+        util.log('deleteUserAddress', 'order_number FAIL');
+
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({ result: "order_number FAIL" }));
+        return;
+    }
+
+    databasePool.getConnection(function(err, connection) {
+        connection.query(queryStr, function(error, rows, fields) {
+            connection.release();
+            if (error) {
+                util.log('getUserOrderHistoryDetail', error.message);
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify({}));
+            } else {
+                util.log('getUserOrderHistoryDetail', '', 'success');
+
+                res.contentType('application/json; charset=utf-8');
+                res.end(JSON.stringify(rows));
+            }
+        });
+    });
+});
+
 
 module.exports = router;
