@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Goods Input</title>
+  <link rel='stylesheet' href='/stylesheets/admin/goods.css' />
+</head>
+<body>
+<div>
+  <form action="input/save" method="post" enctype="multipart/form-data">
+    <div class="input-div">
+      <label>goods_major_classification</label>
+      <select id="goods_major_classification" name="goods_major_classification" onchange="setSubClassification()"></select>
+    </div>
+    <div class="input-div">
+      <label>goods_sub_classification</label>
+      <select id="goods_sub_classification" name="goods_sub_classification"></select>
+    </div>
+    <div class="input-div">
+      <label>stock_quantity</label>
+      <input type="text" name="stock_quantity" value="<%=goods_info.stock_quantity%>">
+    </div>
+    <div class="input-div">
+      <label>price</label>
+      <input type="text" name="price" value="<%=goods_info.price%>">
+    </div>
+    <div class="input-div">
+      <label>chn_title</label>
+      <input type="text" name="chn_title" maxlength="45" value="<%=goods_info.chn_title%>">
+    </div>
+    <div class="input-div">
+      <label>chn_subtitle</label>
+      <input type="text" name="chn_subtitle" maxlength="100" value="<%=goods_info.chn_subtitle%>">
+    </div>
+    <div class="input-div">
+      <label>chn_info</label>
+      <textarea name="chn_info" maxlength="1000" ><%=goods_info.chn_info%></textarea>
+    </div>
+    <div class="input-div">
+      <label>kor_title</label>
+      <input type="text" name="kor_title" maxlength="45" value="<%=goods_info.kor_title%>">
+    </div>
+    <div class="input-div">
+      <label>kor_subtitle</label>
+      <input type="text" name="kor_subtitle" maxlength="100" value="<%=goods_info.kor_subtitle%>">
+    </div>
+    <div class="input-div">
+      <label>kor_info</label>
+      <textarea name="kor_info" maxlength="1000" ><%=goods_info.kor_info%></textarea>
+    </div>
+    <div class="input-div">
+      <label>overseas_flag</label>
+      <select id="overseas_flag" name="overseas_flag">
+        <option value="1" selected="selected">YES</option>
+        <option value="0">NO</option>
+      </select>
+    </div>
+    <div class="input-div">
+      <label>top_image_add</label>
+      <input type="button" value="ADD" onclick="topImageFormAdd()">
+    </div>
+    <div class="input-div top_iamge_add_form">
+    </div>
+    <div class="input-div">
+      <label>info_image_add</label>
+      <input type="button" value="ADD" onclick="infoImageFormAdd()">
+    </div>
+    <div class="input-div info_iamge_add_form">
+    </div>
+    <input type="submit" value="submit">
+  </form>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<script src="/javascripts/admin/goods.js"></script>
+<script type="text/javascript">
+$(function() {
+  setMajorClassification(<%=goods_info.idx_major_classification%>);
+});
+</script>
+</body>
+
+</html>
