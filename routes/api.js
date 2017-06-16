@@ -10,6 +10,14 @@ var request = require('request');
 
 router.get('/getImage', function(req, res, next) {
     var id = req.query.idx;
+    if (!util.valueValidation(id)) {
+        util.log('getImage', 'idx FAIL');
+
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({}));
+        return;
+    }
+
     var queryStr = 'SELECT ';
     queryStr += 'save_file_name, ';
     queryStr += 'original_file_name, ';
@@ -18,7 +26,7 @@ router.get('/getImage', function(req, res, next) {
     queryStr += 'FROM image_file_path ';
     queryStr += 'WHERE id = ' + id + ' ';
     queryStr += 'AND status_flag != 3';
-    // util.log('getGoodsList', queryStr);
+    util.log('getImage', queryStr);
     databasePool.getConnection(function(err, connection) {
         connection.query(queryStr, function(error, rows, fields) {
             connection.release();
@@ -42,7 +50,7 @@ router.get('/getGoodsList', function(req, res, next) {
     queryStr += 'goods.idx_goods_classification, ';
     queryStr += 'goods.price, ';
     queryStr += 'goods.chn_title, ';
-    queryStr += 'goods.chn_subtitle, ';
+    queryStr += 'goods.kor_title, ';
     queryStr += '(SELECT idx_image_file FROM goods_image WHERE top_flag = 1 AND idx_goods = goods.id ORDER BY update_date, id LIMIT 1) AS idx_image ';
     queryStr += 'FROM goods goods, ';
     queryStr += 'goods_sub_classification goods_sub ';
@@ -87,7 +95,7 @@ router.get('/getGoodsDetailInfo', function(req, res, next) {
     queryStr += 'goods.idx_goods_classification, ';
     queryStr += 'goods.price, ';
     queryStr += 'goods.chn_title, ';
-    queryStr += 'goods.chn_subtitle, ';
+    queryStr += 'goods.chn_title, ';
     queryStr += 'goods.chn_info, ';
     queryStr += 'goods_sub.chn_name '
     queryStr += 'FROM goods goods, ';
@@ -176,7 +184,7 @@ router.post('/setCartItem', function(req, res, next) {
                     res.contentType('application/json; charset=utf-8');
                     res.end(JSON.stringify({ result: "FAIL" }));
                 } else {
-                    // console.log(rows.length);
+                    console.log(rows.length);
                     if (rows.length != 0) {
                         queryStr = 'UPDATE cart ';
                         queryStr += 'SET quantity = quantity + 1, ';
@@ -230,16 +238,31 @@ router.get('/getCartItem', function(req, res, next) {
     util.log('getCartItem', '', 'start');
 
     var major_class = req.query.idx_user;
+
+    if (!util.valueValidation(major_class)) {
+        util.log('getGoodsDetailInfo', 'idx_user FAIL');
+
+        res.contentType('application/json; charset=utf-8');
+        res.end(JSON.stringify({}));
+        return;
+    }
+
+
     var queryStr = 'SELECT ';
     queryStr += 'cart.id, ';
     queryStr += 'goods.chn_title, ';
     queryStr += 'goods.chn_subtitle, ';
     queryStr += 'goods.price, ';
-    queryStr += 'cart.quantity ';
+    queryStr += 'cart.quantity, ';
+    queryStr += '(SELECT idx_image_file FROM goods_image WHERE top_flag = 1 AND idx_goods = goods.id ORDER BY update_date, id LIMIT 1) AS idx_image ';
     queryStr += 'FROM cart cart, goods goods ';
     queryStr += 'WHERE cart.idx_goods = goods.id ';
     queryStr += 'AND cart.status_flag != 3 ';
+    queryStr += 'AND goods.status_flag != 3 ';
     queryStr += 'AND cart.idx_user = ' + major_class + ' ';
+
+
+
 
 
     util.log('getCartItem', queryStr);
@@ -425,7 +448,6 @@ router.post('/setUserAddress', function(req, res, next) {
         queryStr += 'idx_user, ';
         queryStr += 'weixin_id, ';
         queryStr += 'name, ';
-        queryStr += 'sex, ';
         queryStr += 'contacts, ';
         queryStr += 'zip_code, ';
         queryStr += 'address_1, ';
@@ -438,7 +460,6 @@ router.post('/setUserAddress', function(req, res, next) {
         queryStr += inputArray.idx_user + ', ';
         queryStr += '"' + inputArray.weixin_id + '", ';
         queryStr += '"' + inputArray.name + '", ';
-        queryStr += '"' + inputArray.sex + '", ';
         queryStr += '"' + inputArray.contacts + '", ';
         queryStr += '"' + inputArray.zip_code + '", ';
         queryStr += '"' + inputArray.address_1 + '", ';
@@ -492,7 +513,6 @@ router.get('/getUserAddressList', function(req, res, next) {
     queryStr += 'id, ';
     queryStr += 'weixin_id, ';
     queryStr += 'name, ';
-    queryStr += 'sex, ';
     queryStr += 'contacts, ';
     queryStr += 'zip_code, ';
     queryStr += '(SELECT areaname FROM quan_prov_city_area where no = address_1) as addressName_1, ';
@@ -540,7 +560,6 @@ router.get('/getUserAddressDetail', function(req, res, next) {
     queryStr += 'id, ';
     queryStr += 'weixin_id, ';
     queryStr += 'name, ';
-    queryStr += 'sex, ';
     queryStr += 'contacts, ';
     queryStr += 'zip_code, ';
     queryStr += 'address_1, ';
@@ -607,7 +626,6 @@ router.put('/updateUserAddress', function(req, res, next) {
         var queryStr = 'UPDATE user_address ';
         queryStr += 'SET weixin_id = "' + inputArray.weixin_id + '", ';
         queryStr += 'name = "' + inputArray.name + '", ';
-        queryStr += 'sex = "' + inputArray.sex + '", ';
         queryStr += 'contacts = "' + inputArray.contacts + '", ';
         queryStr += 'zip_code = "' + inputArray.zip_code + '", ';
         queryStr += 'address_1 = "' + inputArray.address_1 + '", ';
@@ -694,7 +712,6 @@ router.get('/wechatRedirect', function(req, res, next) {
         /**
           {"openid":"opX9IwdgHVHJ_WAF7VKVTx5V-f30",
           "nickname":"devTndn",
-          "sex":0,
           "language":"ko",
           "city":"",
           "province":"",
@@ -714,7 +731,7 @@ router.get('/wechatRedirect', function(req, res, next) {
         //Let's start tndn login with tndn database
 
 
-        var queryStr = "INSERT INTO user (open_id, nickname, sex, language, city, province, contry, headimgurl, privilege) " + " VALUES (\"" + body.openid + "\", \"" + body.nickname + "\",\"" + body.sex + "\",\"" + body.language + "\",\"" + body.city + "\",\"" + body.province + "\",\"" + body.contry + "\",\"" + body.headimgurl + "\",\"" + body.privilege + "\") " + " ON DUPLICATE KEY UPDATE open_id=\"" + body.openid + "\", nickname=\"" + body.nickname + "\", sex=\"" + body.sex + "\", language=\"" + body.language + "\", city=\"" + body.city + "\", province=\"" + body.province + "\", contry=\"" + body.contry + "\", headimgurl=\"" + body.headimgurl + "\", privilege=\"" + body.privilege + "\";";
+        var queryStr = "INSERT INTO user (open_id, nickname,  language, city, province, contry, headimgurl, privilege) " + " VALUES (\"" + body.openid + "\", \"" + body.nickname + "\",\"" + body.language + "\",\"" + body.city + "\",\"" + body.province + "\",\"" + body.contry + "\",\"" + body.headimgurl + "\",\"" + body.privilege + "\") " + " ON DUPLICATE KEY UPDATE open_id=\"" + body.openid + "\", nickname=\"" + body.nickname + "\",  language=\"" + body.language + "\", city=\"" + body.city + "\", province=\"" + body.province + "\", contry=\"" + body.contry + "\", headimgurl=\"" + body.headimgurl + "\", privilege=\"" + body.privilege + "\";";
 
         databasePool.getConnection(function(err, connection) {
             connection.query(queryStr, function(error, rows, fields) {
