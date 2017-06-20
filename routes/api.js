@@ -774,16 +774,16 @@ function getToken(code) {
 
     var appId = 'wxa98e6fa0a6d50100';
     var secret = 'd766e78e01c209c348a9090b0dc8267f';
-    let reqUrl = 'https://api.weixin.qq.com/sns/oauth2/access_token?';
+    var reqUrl = 'https://api.weixin.qq.com/sns/oauth2/access_token?';
 
-    let params = {
+    var params = {
         appid: appId,
         secret: secret,
         code: code,
         grant_type: 'authorization_code'
     };
 
-    let options = {
+    var options = {
         method: 'get',
         url: reqUrl + qs.stringify(params)
     };
@@ -805,14 +805,14 @@ function getToken(code) {
 function getUserInfo(AccessToken, openId) {
     util.log('getUserInfo', '', 'start');
 
-    let reqUrl = 'https://api.weixin.qq.com/sns/userinfo?';
-    let params = {
+    var reqUrl = 'https://api.weixin.qq.com/sns/userinfo?';
+    var params = {
         access_token: AccessToken,
         openid: openId,
         lang: 'zh_CN'
     };
 
-    let options = {
+    var options = {
         method: 'get',
         url: reqUrl + qs.stringify(params)
     };

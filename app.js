@@ -3,9 +3,10 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
-var index = require('./routes/index');
+// var index = require('./public/index');
 var adminGoods = require('./routes/admin/goods');
 var apis = require('./routes/api');
+var wechatRoutes = require('./routes/wechatRoutes');
 
 var app = express();
 
@@ -28,9 +29,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', index);
+// app.use('/', index);
 app.use('/admin/goods', adminGoods);
 app.use('/api', apis);
+app.use('/pay', wechatRoutes);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
