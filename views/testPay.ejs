@@ -9,10 +9,11 @@
   <input type="text" name="priceChnSale" id="priceChnSale" value="7">
   <input type="text" name="resName" id="resName" value="test111">
   <input type="text" name="openid" id="openid" value="opX9IwdgHVHJ_WAF7VKVTx5V-f30">
+  <button onclick="goPaySign()">결제</button>
 </body>
 <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
 <script type="text/javascript">
-function goPaySign(obj) {
+function goPaySign() {
   $.ajax({
     url: "http://www.tndnchina.cn/pay/wechatSign",
     type: "post",
