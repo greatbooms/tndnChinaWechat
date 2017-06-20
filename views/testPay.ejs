@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title></title>
+</head>
+
+<body>
+  <input type="text" name="priceChnSale" id="priceChnSale" value="7">
+  <input type="text" name="resName" id="resName" value="test111">
+  <input type="text" name="openid" id="openid" value="opX9IwdgHVHJ_WAF7VKVTx5V-f30">
+</body>
+<script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+<script type="text/javascript">
+function goPaySign(obj) {
+  $.ajax({
+    url: "http://www.tndnchina.cn/pay/wechatSign",
+    type: "post",
+    data: {
+      resName: $('#priceChnSale').val(),
+      priceChnSale: $('#resName').val(),
+      openid: $('#openid').val()
+    },
+    dataType: "JSON",
+    success: function(data) {
+      callpay(data);
+    },
+    error: function(xhr, status, error) {
+    }
+  });
+}
+
+function jsApiCall(data) {
+  WeixinJSBridge.invoke('getBrandWCPayRequest', {
+    "appId": data.wechatpaySign.appId,
+    "timeStamp": data.wechatpaySign.timeStamp,
+    "nonceStr": data.wechatpaySign.nonceStr,
+    "package": data.wechatpaySign.package,
+    "signType": data.wechatpaySign.signType,
+    "paySign": data.wechatpaySign.prepaySign
+  }, function(res) {
+    WeixinJSBridge.log(res.err_msg);
+    if (res.err_msg == "get_brand_wcpay_request:ok") {
+      location.href = 'http://www.tndntravel.com/pgtndnwechat/complete';
+    }
+    console.log(res.err_code);
+    console.log(res.err_desc);
+    console.log(res.err_msg);
+  });
+}
+
+function callpay(data) {
+  if (typeof WeixinJSBridge == "undefined") {
+    if (document.addEventListener) {
+      document.addEventListener('WeixinJSBridgeReady', jsApiCall, false);
+    } else if (document.attachEvent) {
+      document.attachEvent('WeixinJSBridgeReady', jsApiCall);
+      document.attachEvent('onWeixinJSBridgeReady', jsApiCall);
+    }
+  } else {
+    jsApiCall(data);
+  }
+}
+</script>
+
+</html>
