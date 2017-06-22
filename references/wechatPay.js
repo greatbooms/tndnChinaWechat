@@ -103,7 +103,9 @@ function httpRequestForRefundQuery(xmlData) {
   });
 }
 
-exports.wechatBuildRequest = function(rmbFee, storeName, openID, remoteIp) {
+exports.wechatBuildRequest = function(rmbFee, storeName, openID, remoteIp, out_trade_no) {
+      util.log('wechatBuildRequest', '', 'start');
+
   return new Promise(function(resolve, reject) {
     var fee_type = 'CNY';
     var notify_url = 'http://tndnchina.cn/pay/wechatNotify';
@@ -115,9 +117,7 @@ exports.wechatBuildRequest = function(rmbFee, storeName, openID, remoteIp) {
     var random_num = Math.floor(Math.random() * 10000000) + 1;
     var pad = '00000000';
     var random_num_pad = pad.substring(0, pad.length - random_num.length) + random_num;
-    var out_trade_no = createOutTradeNo();
     var wechatReturnData = {};
-
     if (rmbFee.split('.')[1].length > 1) {
       rmbFee = rmbFee.replace('.', '');
       rmbFee = parseInt(rmbFee);
@@ -139,7 +139,7 @@ exports.wechatBuildRequest = function(rmbFee, storeName, openID, remoteIp) {
     prestr += 'total_fee=' + rmbFee + '&';
     prestr += 'trade_type=' + trade_type + '&';
     prestr += 'key=' + key;
-console.log('  value   '+prestr);
+            util.log('wechatBuildRequest', prestr);
 
     md5sign(prestr, input_charset).then(function(my_sign) {
       var requestXml = '<xml>';
@@ -156,8 +156,6 @@ console.log('  value   '+prestr);
       requestXml += '<trade_type>' + trade_type + '</trade_type>';
       requestXml += '<sign>' + '<![CDATA[' + my_sign + ']]>' + '</sign>';
       requestXml += '</xml>';
-      console.log("   sign   "+my_sign);
-      return httpRequestForWechat(requestXml);
     }).then(function(reponseXml) {
       var parseXmlData = doXMLParse(reponseXml);
       var wechatTimeStamp = Math.round(calcTime() / 1000);
@@ -169,7 +167,6 @@ console.log('  value   '+prestr);
       prestr += 'timeStamp=' + wechatTimeStamp + '&';
       prestr += 'key=' + key;
 
-      console.log("   return    "+ parseXmlData);
       wechatReturnData.appId = parseXmlData.xml.appid + '';
       wechatReturnData.nonceStr = parseXmlData.xml.nonce_str + '';
       wechatReturnData.package = 'prepay_id=' + parseXmlData.xml.prepay_id;

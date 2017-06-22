@@ -18,8 +18,8 @@ function goPaySign() {
     url: "http://www.tndnchina.cn/pay/wechatSign",
     type: "post",
     data: {
-      resName: $('#priceChnSale').val(),
-      priceChnSale: $('#resName').val(),
+      priceChnSale: $('#priceChnSale').val(),
+    resName  : $('#resName').val(),
       openid: $('#openid').val()
     },
     dataType: "JSON",
