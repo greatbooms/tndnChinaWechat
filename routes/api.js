@@ -1000,6 +1000,7 @@ router.get('/getUserOrderHistory', function(req, res, next) {
         '    o.order_number, ' +
         '    o.pay_status, ' +
         '    o.delivery_status, ' +
+        '    g.status_flag, ' +
         "    DATE_FORMAT(o.insert_date, '%Y-%m-%d %H:%i') AS insert_date, " +
         "    DATE_FORMAT(o.update_date, '%Y-%m-%d %H:%i') AS update_date, " +
         '    COUNT(od.idx_order_history) AS goods_count ' +
@@ -1009,8 +1010,7 @@ router.get('/getUserOrderHistory', function(req, res, next) {
         '    goods g, ' +
         '    user u ' +
         'WHERE ' +
-        '    g.status_flag != 3 ' +
-        '        AND od.idx_goods = g.id ' +
+        '         od.idx_goods = g.id ' +
         '        AND od.idx_order_history = o.id ' +
         '        AND o.idx_user = u.id ' +
         '        AND o.idx_user = ' + idxUser +
@@ -1069,7 +1069,6 @@ router.get('/getUserOrderHistoryDetail', function(req, res, next) {
         '     o.id = od.idx_order_history ' +
         '         AND od.idx_goods = g.id ' +
         '         AND gi.status_flag != 3 ' +
-        '         AND g.status_flag != 3 ' +
         '         AND gi.idx_goods = g.id ' +
         '         AND gi.top_flag = 1 ' +
         '         AND o.order_number = \"' + orderNumber + '\"; ';
