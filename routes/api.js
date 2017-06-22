@@ -594,14 +594,12 @@ router.put('/updateUserAddress', function(req, res, next) {
 
     var form = new multiparty.Form();
     var inputArray = {};
-
     // get field name & value
     form.on('field', function(name, value) {
         inputArray[name] = value;
         util.log('updateUserAddress', 'normal field / name = ' + name + ' , value = ' + value);
 
     });
-
     // file upload handling
     form.on('part', function(part) {
         part.on('data', function(chunk) {});
@@ -705,9 +703,13 @@ router.delete('/deleteUserAddress', function(req, res, next) {
 });
 
 router.get('/wechatRedirect', function(req, res, next) {
-    util.log('wechatRedirect', '', 'start');
+    util.log('wechatLogin', '', 'start');
 
     var code = req.query.code;
+
+    /*
+    https://open.weixin.qq.com/connect/oauth2/authorize?appid=wxa98e6fa0a6d50100&redirect_uri=http://www.tndnchina.cn/api/wechatRedirect&response_type=code&scope=snsapi_userinfo&state=STATE#wechat_redirect
+    */
     getToken(code).then(function(body) {
         /**
           {"openid":"opX9IwdgHVHJ_WAF7VKVTx5V-f30",
@@ -721,7 +723,7 @@ router.get('/wechatRedirect', function(req, res, next) {
         */
         if (!util.valueValidation(body.openid)) {
             //wechat login and get userInfo failed
-            util.log('wechatRedirect', 'openid FAIL');
+            util.log('wechatLogin', 'openid FAIL');
 
             res.contentType('application/json; charset=utf-8');
             res.end(JSON.stringify({ result: "openid FAIL" }));
@@ -736,7 +738,7 @@ router.get('/wechatRedirect', function(req, res, next) {
         databasePool.getConnection(function(err, connection) {
             connection.query(queryStr, function(error, rows, fields) {
                 if (error) {
-                    util.log('wechatRedirect', error.message);
+                    util.log('wechatLogin', error.message);
                     res.contentType('application/json; charset=utf-8');
                     res.end(JSON.stringify({ result: "FAIL" }));
                 } else {
@@ -746,16 +748,19 @@ router.get('/wechatRedirect', function(req, res, next) {
                         connection.query("select id from user where open_id=\"" + body.openid + "\";", function(_error, _rows, _fields) {
 
                             userId = _rows[0].id;
-                            res.contentType('application/json; charset=utf-8');
-                            res.end(JSON.stringify({ idx_user: userId }));
+                            res.redirect("http://www.tndnchina.cn/#/shoppingCart?openid=" + body.openid);
+
+                            // res.contentType('application/json; charset=utf-8');
+                            // res.end(JSON.stringify({ idx_user: userId }));
                         });
 
                     } else {
+                        res.redirect("http://www.tndnchina.cn/#/shoppingCart?openid=" + body.openid);
 
-                        res.contentType('application/json; charset=utf-8');
-                        res.end(JSON.stringify({ idx_user: userId }));
+                        // res.contentType('application/json; charset=utf-8');
+                        // res.end(JSON.stringify({ idx_user: userId }));
                     }
-                    util.log('wechatRedirect', '', 'success');
+                    util.log('wechatLogin', '', 'success');
 
 
                 }
@@ -828,14 +833,6 @@ function getUserInfo(AccessToken, openId) {
     })
 }
 
-/**
-create order no
-*/
-function createOrderNo() {
-    var orderNo = Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-    return orderNo.substring(0, 22).replace('-', '').toUpperCase();
-
-}
 
 /**
   order payed history insert to db
@@ -866,7 +863,7 @@ router.post('/setOrder', function(req, res, next) {
 
     // all uploads are completed
     form.on('close', function() {
-        var orderNumber = createOrderNo();
+        var orderNumber = util.createOrderNo();
         var historyQuery = 'INSERT INTO order_history(idx_user, total_price, order_number, pay_status, delivery_status, insert_date) ' + ' VALUES(\"' + inputArray.idx_user + '\", \"' + inputArray.total_price + '\", \"' + orderNumber + '\", 0, 0, now());';
         var historyDetailQuery = 'INSERT INTO order_history_detail_items(idx_order_history, idx_goods, quantity) VALUES ';
 
@@ -995,26 +992,22 @@ router.get('/getUserOrderHistory', function(req, res, next) {
 
     var idxUser = req.query.idx_user;
 
-    var queryStr = '  SELECT  ' +
-        '    o.total_price, ' +
-        '    o.order_number, ' +
-        '    o.pay_status, ' +
-        '    o.delivery_status, ' +
-        '    g.status_flag, ' +
-        "    DATE_FORMAT(o.insert_date, '%Y-%m-%d %H:%i') AS insert_date, " +
-        "    DATE_FORMAT(o.update_date, '%Y-%m-%d %H:%i') AS update_date, " +
-        '    COUNT(od.idx_order_history) AS goods_count ' +
+
+    var queryStr = 'SELECT ' +
+        '    total_price,' +
+        '    order_number,' +
+        '    pay_status,' +
+        '    delivery_status,' +
+        '    id,' +
+        '    DATE_FORMAT(insert_date, "%Y-%m-%d %H:%i") AS insert_date,' +
+        '    DATE_FORMAT(update_date, "%Y-%m-%d %H:%i") AS update_date,' +
+        '    (select count(id) from order_history_detail_items where idx_order_history = id) as goods_count ' +
         'FROM ' +
-        '    order_history o, ' +
-        '    order_history_detail_items od, ' +
-        '    goods g, ' +
-        '    user u ' +
+        '    order_history ' +
         'WHERE ' +
-        '         od.idx_goods = g.id ' +
-        '        AND od.idx_order_history = o.id ' +
-        '        AND o.idx_user = u.id ' +
-        '        AND o.idx_user = ' + idxUser +
-        ' GROUP BY od.idx_order_history; ';
+        '        idx_user = ' + idxUser + ';';
+
+
     util.log('getUserOrderHistory', queryStr);
 
     if (!util.valueValidation(idxUser)) {

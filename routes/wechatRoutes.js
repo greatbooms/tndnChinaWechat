@@ -6,19 +6,32 @@ var util = require('../references/utility.js');
 var request = require('request');
 ///////////////
 var mysql = require('mysql');
-var databaseConfig = require('../references/databaseConfig.js');
-var pool = mysql.createPool(databaseConfig);
+var databasePool = require('../references/databaseConfig.js');
+var multiparty = require('multiparty');
 
+
+/**
+idx_user : value
+idx_goods : index
+quantity : index
+idx_goods : index
+quantity : index
+total_price : 3000
+chn_title : name
+openid : id
+*/
 router.post('/wechatSign', function(req, res, next) {
     util.log('wechatSign', '', 'start');
 
     var form = new multiparty.Form();
-    var inputArray = {};
+
+    var inputArray = { idx_goodss: [], quantitys: [] };
     var remoteIp = req.connection.remoteAddress;
-    var orderNumber = createOrderNo();
+    var orderNumber = util.createOrderNo();
 
     // get field name & value
     form.on('field', function(name, value) {
+    	console.log('ok');
         inputArray[name] = value;
         if (name == 'idx_goods') {
             inputArray.idx_goodss.push({ "idx_goods": value })
@@ -40,55 +53,67 @@ router.post('/wechatSign', function(req, res, next) {
         remoteIp = remoteIp.split(':')[3]
     }
     form.on('close', function() {
-        mobilePayModule.wechatBuildRequest(inputArray.total_price, inputArray.chn_title, inputArray.openid, remoteIp, orderNumber).then(function(returnData) {
-            var historyQuery = 'INSERT INTO order_history(idx_user, total_price, order_number, pay_status, delivery_status, insert_date) ' + ' VALUES(\"' + inputArray.idx_user + '\", \"' + inputArray.total_price + '\", \"' + orderNumber + '\", 0, 0, now());';
-            var historyDetailQuery = 'INSERT INTO order_history_detail_items(idx_order_history, idx_goods, quantity) VALUES ';
+        // if idx_goods and quantity array size different, throw error
+        if (inputArray.idx_goodss.length != inputArray.quantitys.length || inputArray.idx_goodss.length == 0) {
+            util.log('wechatSign', 'different goods and quantity size FAIL');
 
-            // if idx_goods and quantity array size different, throw error
-            if (inputArray.idx_goodss.length != inputArray.quantitys.length) {
-                util.log('wechatSign', 'different goods and quantity size FAIL');
+            res.contentType('application/json; charset=utf-8');
+            res.end(JSON.stringify({ result: "different goods and quantity size FAIL" }));
+            return;
+        }
+        if (!util.valueValidation(inputArray.total_price) || !util.valueValidation(inputArray.chn_title) || !util.valueValidation(inputArray.openid)) {
+            util.log('wechatSign', 'required value FAIL');
+            res.contentType('application/json; charset=utf-8');
+            res.end(JSON.stringify({}));
+            return;
+        }
 
-                res.contentType('application/json; charset=utf-8');
-                res.end(JSON.stringify({ result: "different goods and quantity size FAIL" }));
-                return;
-            }
-            databasePool.getConnection(function(err, connection) {
-                connection.query(historyQuery, function(error, rows, fields) {
-                    connection.release();
-                    var idxOrderHistory = rows.insertId;
+        var historyQuery = 'INSERT INTO order_history(idx_user, total_price, order_number, pay_status, delivery_status, insert_date) ' + ' VALUES(\"' + inputArray.idx_user + '\", \"' + inputArray.total_price + '\", \"' + orderNumber + '\", 0, 0, now());';
+        var historyDetailQuery = 'INSERT INTO order_history_detail_items(idx_order_history, idx_goods, quantity) VALUES ';
 
-                    util.log('wechatSign', 'insert order_history');
 
-                    if (error) throw error;
-                    for (var i = 0; i < inputArray.idx_goodss.length; i++) {
-                        historyDetailQuery = historyDetailQuery + ' (' + idxOrderHistory + ', ' + inputArray.idx_goodss[i].idx_goods + ', ' + inputArray.quantitys[i].quantity + '),';
+        databasePool.getConnection(function(err, connection) {
+            connection.query(historyQuery, function(error, rows, fields) {
+                connection.release();
+                console.log(historyQuery);
+                var idxOrderHistory = rows.insertId;
 
-                        if (i == inputArray.idx_goodss.length - 1) {
-                            //last array
-                            //have to delete last comma(,) and write semicolon(;)
-                            //and execute insert query
-                            historyDetailQuery = historyDetailQuery.substring(0, historyDetailQuery.length - 1) + ';';
+                util.log('wechatSign', 'insert order_history');
 
-                            util.log('wechatSign', 'insert order_history_detail  ' + orderNumber);
-                            connection.query(historyDetailQuery, function(error2, rows2, fields2) {
-                                if (error2) throw error2;
-                                util.log('wechatSign', '', 'success');
+                if (error) throw error;
+                for (var i = 0; i < inputArray.idx_goodss.length; i++) {
+                    historyDetailQuery = historyDetailQuery + ' (' + idxOrderHistory + ', ' + inputArray.idx_goodss[i].idx_goods + ', ' + inputArray.quantitys[i].quantity + '),';
 
+                    if (i == inputArray.idx_goodss.length - 1) {
+                        //last array
+                        //have to delete last comma(,) and write semicolon(;)
+                        //and execute insert query
+                        historyDetailQuery = historyDetailQuery.substring(0, historyDetailQuery.length - 1) + ';';
+
+                        util.log('wechatSign', 'insert order_history_detail  ' + orderNumber);
+                        connection.query(historyDetailQuery, function(error2, rows2, fields2) {
+                            if (error2) throw error2;
+                            util.log('wechatSign', '', 'success');
+
+                            mobilePayModule.wechatBuildRequest(inputArray.total_price, inputArray.chn_title, inputArray.openid, remoteIp, orderNumber).then(function(returnData) {
                                 util.returnHeader(res);
                                 util.returnBody(res, 'wechatpaySign', returnData);
                                 util.returnFooter(res);
 
                             });
-                        } //end if last array check
-                    } //end for
-                });
+
+                        });
+                    } //end if last array check
+                } //end for
             });
-
-
         });
+
     }); //end form close
-
-
+ // track progress
+    form.on('progress', function(byteRead, byteExpected) {
+        // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
+    });
+    form.parse(req);
 });
 
 router.post('/wechatNotify', function(req, res, next) {

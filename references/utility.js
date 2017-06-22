@@ -51,3 +51,11 @@ module.exports.error = function(res, message, code) {
   res.write(JSON.stringify({ 'result': 'failed', 'data': message}));
   res.end();
 }
+
+/**
+create order no
+*/
+exports.createOrderNo=function() {
+    var orderNo = Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+    return orderNo.substring(0, 22).replace('-', '').toUpperCase();
+}

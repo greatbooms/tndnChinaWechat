@@ -4,6 +4,8 @@ var xml2js = require('xml2js');
 var crypto = require('crypto');
 var fs = require('fs');
 var path = require('path');
+var util = require('../references/utility.js');
+
 var pfxFilePath = path.resolve(__dirname, 'apiclient_cert.p12')
 var appid = 'wxa98e6fa0a6d50100';
 var APPSECRET = 'd766e78e01c209c348a9090b0dc8267f';
