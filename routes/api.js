@@ -11,7 +11,6 @@ var request = require('request');
 router.get('/getImage', function(req, res, next) {
     var id = req.query.idx;
     if (!util.valueValidation(id)) {
-        util.log('getImage', 'idx FAIL');
 
         res.contentType('application/json; charset=utf-8');
         res.end(JSON.stringify({}));
@@ -26,7 +25,6 @@ router.get('/getImage', function(req, res, next) {
     queryStr += 'FROM image_file_path ';
     queryStr += 'WHERE id = ' + id + ' ';
     queryStr += 'AND status_flag != 3';
-    util.log('getImage', queryStr);
     databasePool.getConnection(function(err, connection) {
         connection.query(queryStr, function(error, rows, fields) {
             connection.release();
@@ -708,7 +706,7 @@ router.get('/wechatRedirect', function(req, res, next) {
     var code = req.query.code;
 
     /*
-    https://open.weixin.qq.com/connect/oauth2/authorize?appid=wxa98e6fa0a6d50100&redirect_uri=http://www.tndnchina.cn/api/wechatRedirect&response_type=code&scope=snsapi_userinfo&state=STATE#wechat_redirect
+    https://open.weixin.qq.com/connect/oauth2/authorize?appid=wxa98e6fa0a6d50100&redirect_uri=http://www.tndnchina.cn/api/wechatLogin&response_type=code&scope=snsapi_userinfo&state=STATE#wechat_redirect
     */
     getToken(code).then(function(body) {
         /**
@@ -748,14 +746,17 @@ router.get('/wechatRedirect', function(req, res, next) {
                         connection.query("select id from user where open_id=\"" + body.openid + "\";", function(_error, _rows, _fields) {
 
                             userId = _rows[0].id;
-                            res.redirect("http://www.tndnchina.cn/#/shoppingCart?openid=" + body.openid);
+                            res.redirect("http://www.tndnchina.cn/#/login?openid=" + body.openid + "&idx_user=" + userId);
 
                             // res.contentType('application/json; charset=utf-8');
                             // res.end(JSON.stringify({ idx_user: userId }));
+                        console.log("http://www.tndnchina.cn/#/login?openid=" + body.openid + "&idx_user=" + userId);
+
                         });
 
                     } else {
-                        res.redirect("http://www.tndnchina.cn/#/shoppingCart?openid=" + body.openid);
+                        console.log("http://www.tndnchina.cn/#/login?openid=" + body.openid + "&idx_user=" + userId);
+                        res.redirect("http://www.tndnchina.cn/#/login?openid=" + body.openid + "&idx_user=" + userId);
 
                         // res.contentType('application/json; charset=utf-8');
                         // res.end(JSON.stringify({ idx_user: userId }));
@@ -993,23 +994,6 @@ router.get('/getUserOrderHistory', function(req, res, next) {
     var idxUser = req.query.idx_user;
 
 
-    var queryStr = 'SELECT ' +
-        '    total_price,' +
-        '    order_number,' +
-        '    pay_status,' +
-        '    delivery_status,' +
-        '    id,' +
-        '    DATE_FORMAT(insert_date, "%Y-%m-%d %H:%i") AS insert_date,' +
-        '    DATE_FORMAT(update_date, "%Y-%m-%d %H:%i") AS update_date,' +
-        '    (select count(id) from order_history_detail_items where idx_order_history = id) as goods_count ' +
-        'FROM ' +
-        '    order_history ' +
-        'WHERE ' +
-        '        idx_user = ' + idxUser + ';';
-
-
-    util.log('getUserOrderHistory', queryStr);
-
     if (!util.valueValidation(idxUser)) {
         util.log('getUserOrderHistory', 'idx_user FAIL');
 
@@ -1018,8 +1002,41 @@ router.get('/getUserOrderHistory', function(req, res, next) {
         return;
     }
 
+    var queryStr = 'SELECT  ';
+    queryStr += '    g.id AS idx_goods, ';
+    queryStr += '    o.id AS idx_order_history, ';
+    queryStr += '    o.total_price, ';
+    queryStr += '    o.order_number, ';
+    queryStr += '    g.chn_title, ';
+    queryStr += '    g.chn_subtitle, ';
+    queryStr += '    od.quantity, ';
+    queryStr += '    g.price, ';
+    queryStr += '    o.pay_status, ';
+    queryStr += '    o.delivery_status, ';
+    queryStr += '    DATE_FORMAT(o.insert_date, "%Y-%m-%d%H:%i") AS insert_date, ';
+    queryStr += '    DATE_FORMAT(o.update_date, "%Y-%m-%d%H:%i") AS update_date, ';
+    queryStr += '    (SELECT  ';
+    queryStr += '            idx_image_file ';
+    queryStr += '        FROM ';
+    queryStr += '            goods_image ';
+    queryStr += '        WHERE ';
+    queryStr += '            idx_goods = g.id AND top_flag = 1 ';
+    queryStr += '        LIMIT 1) AS idx_image ';
+    queryStr += 'FROM ';
+    queryStr += '    order_history o, ';
+    queryStr += '    order_history_detail_items od, ';
+    queryStr += '    goods g ';
+    queryStr += 'WHERE ';
+    queryStr += '    o.id = od.idx_order_history ';
+    queryStr += '        AND od.idx_goods = g.id ';
+    queryStr += '        AND idx_user = ' + idxUser + ' ORDER BY o.insert_date DESC, o.id DESC;';
+
+
+
+    util.log('getUserOrderHistory', queryStr);
+
     databasePool.getConnection(function(err, connection) {
-        connection.query(queryStr, function(error, rows, fields) {
+        connection.query(queryStr, function(error, rows) {
             connection.release();
             if (error) {
                 util.log('getUserOrderHistory', error.message);
@@ -1027,10 +1044,79 @@ router.get('/getUserOrderHistory', function(req, res, next) {
                 res.contentType('application/json; charset=utf-8');
                 res.end(JSON.stringify({}));
             } else {
-                util.log('getUserOrderHistory', '', 'success');
+                var inputArray = [];
+                var innerArray = [];
+                var inputArrayIndex = 0;
+                var innerArrayIndex = 0;
 
-                res.contentType('application/json; charset=utf-8');
-                res.end(JSON.stringify(rows));
+                if (rows.length == 0) {
+                    util.log('getUserOrderHistory', 'empty rows')
+                    util.returnHeader(res);
+                    util.returnBody(res, 'data', inputArray);
+                    util.returnFooter(res);
+                    util.log('getUserOrderHistory', '', 'success');
+
+                } else if (rows.length == 1) {
+                    innerArray[0] = rows[0];
+                    inputArray[0] = innerArray;
+                    util.log('getUserOrderHistory', inputArray)
+                    util.returnHeader(res);
+                    util.returnBody(res, 'data', inputArray);
+                    util.returnFooter(res);
+                    util.log('getUserOrderHistory', '', 'success');
+
+                } else {
+                    for (var i = 0; i < rows.length - 1; i++) {
+                        (function() {
+                            var k = i;
+                            //값 2개 비교 후 같으면 같은 배열에 푸시, 다르면 다른 배열에 푸시
+                            if (rows[k].order_number == rows[k + 1].order_number) {
+                                //첫 인덱스는 같으면 두개다 넣어야 하기 때문에 체크
+                                if (k == 0) {
+                                    //0번째와 1번째가 같은 거래건임
+                                    innerArray[innerArrayIndex] = rows[k];
+                                    innerArrayIndex++;
+                                    innerArray[innerArrayIndex] = rows[k + 1];
+
+                                } else {
+                                    //0번째가 아닌 연속되는 두개의 물품이 같은 거래건임
+
+                                    innerArray[innerArrayIndex] = rows[k + 1];
+                                    innerArrayIndex++;
+
+                                }
+                            } else {
+                                //비교하는 k&k+1이 다른 거래건임
+                                if (k == 0) {
+                                    innerArray[k] = rows[k];
+                                }
+                                inputArray[inputArrayIndex] = innerArray;
+
+                                inputArrayIndex++;
+                                innerArray = [];
+                                innerArrayIndex = 0;
+                                innerArray[innerArrayIndex] = rows[k + 1];
+                                innerArrayIndex++;
+
+                            }
+
+
+                            if (k == rows.length - 2) {
+                                //리턴하기
+                                if (innerArray.size != 0) {
+                                    inputArray[inputArrayIndex] = innerArray;
+                                }
+                                util.log('getUserOrderHistory', '', 'success');
+                                util.returnHeader(res);
+                                util.returnBody(res, 'data', inputArray);
+                                util.returnFooter(res);
+                            }
+
+                        }()); //end function
+                    } //end FOR LOOP rows
+
+                } //end else rows.legnth check
+
             }
         });
     });

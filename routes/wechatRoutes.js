@@ -28,10 +28,11 @@ router.post('/wechatSign', function(req, res, next) {
     var inputArray = { idx_goodss: [], quantitys: [] };
     var remoteIp = req.connection.remoteAddress;
     var orderNumber = util.createOrderNo();
+    var openid = 0;
 
     // get field name & value
     form.on('field', function(name, value) {
-    	console.log('ok');
+        console.log('ok');
         inputArray[name] = value;
         if (name == 'idx_goods') {
             inputArray.idx_goodss.push({ "idx_goods": value })
@@ -61,7 +62,7 @@ router.post('/wechatSign', function(req, res, next) {
             res.end(JSON.stringify({ result: "different goods and quantity size FAIL" }));
             return;
         }
-        if (!util.valueValidation(inputArray.total_price) || !util.valueValidation(inputArray.chn_title) || !util.valueValidation(inputArray.openid)) {
+        if (!util.valueValidation(inputArray.total_price) || !util.valueValidation(inputArray.chn_title) || !util.valueValidation(inputArray.idx_user)) {
             util.log('wechatSign', 'required value FAIL');
             res.contentType('application/json; charset=utf-8');
             res.end(JSON.stringify({}));
@@ -70,46 +71,66 @@ router.post('/wechatSign', function(req, res, next) {
 
         var historyQuery = 'INSERT INTO order_history(idx_user, total_price, order_number, pay_status, delivery_status, insert_date) ' + ' VALUES(\"' + inputArray.idx_user + '\", \"' + inputArray.total_price + '\", \"' + orderNumber + '\", 0, 0, now());';
         var historyDetailQuery = 'INSERT INTO order_history_detail_items(idx_order_history, idx_goods, quantity) VALUES ';
+        var query = ' SELECT  ';
+        query += ' open_id ';
+        query += ' FROM ';
+        query += ' user ';
+        query += ' WHERE ';
+        query += ' id = \"' + inputArray.idx_user + '\";';
 
 
         databasePool.getConnection(function(err, connection) {
-            connection.query(historyQuery, function(error, rows, fields) {
-                connection.release();
-                console.log(historyQuery);
-                var idxOrderHistory = rows.insertId;
+            connection.query(query, function(err, ro, fi) {
+                if (err) throw err;
+                if (ro.length == 0) {
+                    util.log('wechatSign', 'not match idx_user and openid');
+                    res.contentType('application/json; charset=utf-8');
+                    res.end(JSON.stringify({ result: "not match idx_user and openid FAIL" }));
+                    return;
+                }
+                openid = ro[0].open_id
+                util.log('wechatSign', 'idx_user and openid matched');
 
-                util.log('wechatSign', 'insert order_history');
+                connection.query(historyQuery, function(error, rows, fields) {
+                    connection.release();
+                    var idxOrderHistory = rows.insertId;
 
-                if (error) throw error;
-                for (var i = 0; i < inputArray.idx_goodss.length; i++) {
-                    historyDetailQuery = historyDetailQuery + ' (' + idxOrderHistory + ', ' + inputArray.idx_goodss[i].idx_goods + ', ' + inputArray.quantitys[i].quantity + '),';
+                    util.log('wechatSign', 'insert order_history');
 
-                    if (i == inputArray.idx_goodss.length - 1) {
-                        //last array
-                        //have to delete last comma(,) and write semicolon(;)
-                        //and execute insert query
-                        historyDetailQuery = historyDetailQuery.substring(0, historyDetailQuery.length - 1) + ';';
+                    if (error) throw error;
+                    for (var i = 0; i < inputArray.idx_goodss.length; i++) {
+                        historyDetailQuery = historyDetailQuery + ' (' + idxOrderHistory + ', ' + inputArray.idx_goodss[i].idx_goods + ', ' + inputArray.quantitys[i].quantity + '),';
 
-                        util.log('wechatSign', 'insert order_history_detail  ' + orderNumber);
-                        connection.query(historyDetailQuery, function(error2, rows2, fields2) {
-                            if (error2) throw error2;
-                            util.log('wechatSign', '', 'success');
+                        if (i == inputArray.idx_goodss.length - 1) {
+                            //last array
+                            //have to delete last comma(,) and write semicolon(;)
+                            //and execute insert query
+                            historyDetailQuery = historyDetailQuery.substring(0, historyDetailQuery.length - 1) + ';';
 
-                            mobilePayModule.wechatBuildRequest(inputArray.total_price, inputArray.chn_title, inputArray.openid, remoteIp, orderNumber).then(function(returnData) {
-                                util.returnHeader(res);
-                                util.returnBody(res, 'wechatpaySign', returnData);
-                                util.returnFooter(res);
+                            util.log('wechatSign', 'insert order_history_detail  ' + orderNumber);
+                            connection.query(historyDetailQuery, function(error2, rows2, fields2) {
+                                if (error2) throw error2;
+                                util.log('wechatSign', '', 'success');
 
-                            });
+                                mobilePayModule.wechatBuildRequest(inputArray.total_price, inputArray.chn_title, openid, remoteIp, orderNumber).then(function(returnData) {
+                                    util.log('wechatSign', '********************');
 
-                        });
-                    } //end if last array check
-                } //end for
-            });
+                                    util.returnHeader(res);
+                                    util.returnBody(res, 'wechatpaySign', returnData);
+                                    util.returnFooter(res);
+
+                                });
+
+                            }); //end connectino historyDetailQuery
+                        } //end if last array check
+                    } //end for
+                }); //end connection historyQuery
+            }); //end select openId using idx_user
+
         });
 
     }); //end form close
- // track progress
+    // track progress
     form.on('progress', function(byteRead, byteExpected) {
         // console.log(' Reading total  ' + byteRead + '/' + byteExpected);
     });

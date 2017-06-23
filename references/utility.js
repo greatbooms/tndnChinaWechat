@@ -21,41 +21,41 @@ var today = exports.today = function() {
 
 exports.log = function(api, data, start) {
     if (start == 'start') {
-    	        return console.log(today() + '  ********* ' + api + ' START ********');
+        return console.log(today() + '  ********* ' + api + ' START ********');
 
-    }else if (start == 'success') {
-    	        return console.log(today() + '  ********* ' + api + ' SUCCESS ********');
+    } else if (start == 'success') {
+        return console.log(today() + '  ********* ' + api + ' SUCCESS ********');
 
     } else {
         return console.log(today() + '  "' + api + '"     ' + data + '  ');
     }
 };
 module.exports.returnHeader = function(res) {
-  res.contentType('application/json; charset=utf-8');
-  res.write('{\"result\":\"success\"');
+    res.contentType('application/json; charset=utf-8');
+    res.write('{\"result\":\"success\"');
 }
 
 module.exports.returnBody = function(res, key, value) {
-  res.write(',\"' + key + '\":');
-  res.write(JSON.stringify(value));
+    res.write(',\"' + key + '\":');
+    res.write(JSON.stringify(value));
 }
 
 module.exports.returnFooter = function(res) {
     res.write('}');
-  res.end();
+    res.end();
 }
 
 module.exports.error = function(res, message, code) {
-  res.contentType('application/json; charset=utf-8');
-  res.status(code);
-  res.write(JSON.stringify({ 'result': 'failed', 'data': message}));
-  res.end();
+    res.contentType('application/json; charset=utf-8');
+    res.status(code);
+    res.write(JSON.stringify({ 'result': 'failed', 'data': message }));
+    res.end();
 }
 
 /**
 create order no
 */
-exports.createOrderNo=function() {
+exports.createOrderNo = function() {
     var orderNo = Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1) + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
     return orderNo.substring(0, 22).replace('-', '').toUpperCase();
 }
