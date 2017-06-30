@@ -95,7 +95,8 @@ router.get('/getGoodsDetailInfo', function(req, res, next) {
     queryStr += 'goods.chn_title, ';
     queryStr += 'goods.chn_title, ';
     queryStr += 'goods.chn_info, ';
-    queryStr += 'goods_sub.chn_name '
+    queryStr += 'goods_sub.chn_name, '
+    queryStr += '(SELECT idx_image_file FROM goods_image WHERE top_flag = 1 AND idx_goods = goods.id ORDER BY update_date, id LIMIT 1) AS idx_image ';
     queryStr += 'FROM goods goods, ';
     queryStr += 'goods_sub_classification goods_sub ';
     queryStr += 'WHERE goods.idx_goods_classification = goods_sub.id ';
@@ -238,7 +239,7 @@ router.get('/getCartItem', function(req, res, next) {
     var major_class = req.query.idx_user;
 
     if (!util.valueValidation(major_class)) {
-        util.log('getGoodsDetailInfo', 'idx_user FAIL');
+        util.log('getCartItem', 'idx_user FAIL');
 
         res.contentType('application/json; charset=utf-8');
         res.end(JSON.stringify({}));
@@ -750,7 +751,7 @@ router.get('/wechatRedirect', function(req, res, next) {
 
                             // res.contentType('application/json; charset=utf-8');
                             // res.end(JSON.stringify({ idx_user: userId }));
-                        console.log("http://www.tndnchina.cn/#/login?openid=" + body.openid + "&idx_user=" + userId);
+                            console.log("http://www.tndnchina.cn/#/login?openid=" + body.openid + "&idx_user=" + userId);
 
                         });
 

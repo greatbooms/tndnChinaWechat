@@ -120,14 +120,8 @@ exports.wechatBuildRequest = function(rmbFee, storeName, openID, remoteIp, out_t
         var pad = '00000000';
         var random_num_pad = pad.substring(0, pad.length - random_num.length) + random_num;
         var wechatReturnData = {};
-        if (rmbFee.split('.')[1].length > 1) {
-            rmbFee = rmbFee.replace('.', '');
-            rmbFee = parseInt(rmbFee);
-        } else {
-            rmbFee = rmbFee + '0';
-            rmbFee = rmbFee.replace('.', '');
-            rmbFee = parseInt(rmbFee);
-        }
+     
+        rmbFee = parseInt(rmbFee);
 
         var prestr = 'appid=' + appid + '&';
         prestr += 'attach=' + attach + '&';

@@ -29,10 +29,10 @@ router.post('/wechatSign', function(req, res, next) {
     var remoteIp = req.connection.remoteAddress;
     var orderNumber = util.createOrderNo();
     var openid = 0;
+    var rmbFee;
 
     // get field name & value
     form.on('field', function(name, value) {
-        console.log('ok');
         inputArray[name] = value;
         if (name == 'idx_goods') {
             inputArray.idx_goodss.push({ "idx_goods": value })
@@ -54,6 +54,10 @@ router.post('/wechatSign', function(req, res, next) {
         remoteIp = remoteIp.split(':')[3]
     }
     form.on('close', function() {
+        rmbFee = inputArray.total_price + '';
+
+
+
         // if idx_goods and quantity array size different, throw error
         if (inputArray.idx_goodss.length != inputArray.quantitys.length || inputArray.idx_goodss.length == 0) {
             util.log('wechatSign', 'different goods and quantity size FAIL');
@@ -69,7 +73,24 @@ router.post('/wechatSign', function(req, res, next) {
             return;
         }
 
-        var historyQuery = 'INSERT INTO order_history(idx_user, total_price, order_number, pay_status, delivery_status, insert_date) ' + ' VALUES(\"' + inputArray.idx_user + '\", \"' + inputArray.total_price + '\", \"' + orderNumber + '\", 0, 0, now());';
+
+        if (rmbFee.indexOf('.') == -1) {
+            //.이 없이 금액이 넘어왔을 경우
+            rmbFee + '00';
+        } else if (rmbFee.split('.')[1].length == 1) {
+            //소숫점 자리수가 1개일경우
+            rmbFee = rmbFee + '0';
+            rmbFee = rmbFee.replace('.', '');
+        } else if (rmbFee.split('.')[1].length == 2) {
+            //소숫점 자리수가 2개일 경우
+            rmbFee = rmbFee.replace('.', '');
+        } else {
+            //소숫점 자리수가 2개 이상일 경우
+            rmbFee = rmbFee.split('.')[0] + rmbFee.split('.')[1].substr(0, 2);
+        }
+
+
+        var historyQuery = 'INSERT INTO order_history(idx_user, total_price, order_number, pay_status, delivery_status, insert_date) ' + ' VALUES(\"' + inputArray.idx_user + '\", \"' + rmbFee + '\", \"' + orderNumber + '\", 0, 0, now());';
         var historyDetailQuery = 'INSERT INTO order_history_detail_items(idx_order_history, idx_goods, quantity) VALUES ';
         var query = ' SELECT  ';
         query += ' open_id ';
@@ -112,7 +133,7 @@ router.post('/wechatSign', function(req, res, next) {
                                 if (error2) throw error2;
                                 util.log('wechatSign', '', 'success');
 
-                                mobilePayModule.wechatBuildRequest(inputArray.total_price, inputArray.chn_title, openid, remoteIp, orderNumber).then(function(returnData) {
+                                mobilePayModule.wechatBuildRequest(rmbFee, inputArray.chn_title, openid, remoteIp, orderNumber).then(function(returnData) {
                                     util.log('wechatSign', '********************');
 
                                     util.returnHeader(res);
@@ -163,13 +184,14 @@ router.post('/wechatNotify', function(req, res, next) {
 
 
                         connection.query(query, function(err, rows) {
-                            console.log(rows);
                             if (rows.affectedRows == 0) {
                                 //해당하는 값이 없음
                                 util.log('wechatNotify', 'wechatNotify Error out_trade_no!!');
                                 res.write('error!');
                                 res.end();
                             } else {
+                                util.log('wechatNotify', '', 'success');
+
                                 res.write('<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>');
                                 res.end();
                             }
